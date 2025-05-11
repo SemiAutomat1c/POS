@@ -23,8 +23,25 @@ export interface Product {
   color?: string;
   storage?: string;
   condition?: 'new' | 'pre-owned' | 'refurbished';
+  // Product variant tracking
+  isBaseProduct?: boolean; // Indicates if this is a base product (not a variant)
+  baseProductId?: number; // Reference to the base product if this is a variant
+  variantType?: string; // The type of variation (color, storage, etc.)
+  variantValue?: string; // The value of the variation (blue, 256GB, etc.)
+  variantName?: string; // Display name for this variant
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+// New variant-related types for product management
+export interface ProductVariantOption {
+  type: string; // 'color', 'storage', etc.
+  values: string[]; // ['blue', 'red', 'black'], etc.
+}
+
+export interface ProductWithVariants extends Product {
+  variants?: Product[];
+  variantOptions?: ProductVariantOption[];
 }
 
 // Default values and validation would be handled at the application level
