@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { Toaster, toast } from 'sonner';
-import { initDatabase } from '@/lib/db-init';
 
 interface DatabaseProviderProps {
   children: React.ReactNode;
@@ -15,19 +14,42 @@ export default function DatabaseProvider({ children }: DatabaseProviderProps) {
   useEffect(() => {
     const initializeDatabase = async () => {
       try {
-        console.log('Initializing database...');
-        const result = await initDatabase();
-        if (result) {
-          console.log('Database initialized successfully');
-          setInitialized(true);
-        } else {
-          console.error('Database initialization failed');
-          setError('Failed to initialize database - initialization returned false');
-          toast.error('Database initialization failed', {
-            description: 'Please refresh the page to try again',
+        console.log('Initializing database via API...');
+
+        // Step 1: Check database status
+        const statusResponse = await fetch('/api/database/status');
+        const statusData = await statusResponse.json();
+        
+        console.log('Database status:', statusData);
+        
+        if (statusData.environment === 'production' && statusData.connectionStatus !== 'connected') {
+          console.error('Database connection failed:', statusData.error);
+          setError(`Database connection error: ${statusData.error}`);
+          toast.error('Database connection failed', {
+            description: statusData.error || 'Could not connect to PostgreSQL',
             duration: 5000,
           });
+          return;
         }
+        
+        // Step 2: Initialize database
+        if (statusData.environment === 'production') {
+          const initResponse = await fetch('/api/database/initialize');
+          const initData = await initResponse.json();
+          
+          console.log('Database initialization response:', initData);
+          
+          if (!initData.success) {
+            throw new Error(initData.message || 'Failed to initialize database tables');
+          }
+        } else {
+          // For non-production, use the client-side IndexedDB
+          const { initDatabase } = await import('@/lib/db-init');
+          await initDatabase();
+        }
+        
+        setInitialized(true);
+        console.log('Database initialized successfully');
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err);
         console.error('Error initializing database:', errorMessage);
