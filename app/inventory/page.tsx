@@ -23,6 +23,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { fetchProducts, createProduct } from "@/store/slices/productSlice"
 import type { Product } from "@/lib/models/Product"
 import type { Product as LegacyProduct } from "@/types"
+import { toast } from "sonner"
 
 // For compatibility with the existing component props
 interface ProductViewData extends Product {
@@ -65,6 +66,7 @@ export default function InventoryPage() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<LegacyProduct | null>(null)
   const [activeFilter, setActiveFilter] = useState("all")
+  const [addedCount, setAddedCount] = useState(0)
 
   useEffect(() => {
     const loadData = async () => {
@@ -78,6 +80,14 @@ export default function InventoryPage() {
 
     loadData()
   }, [dispatch])
+
+  // Add an effect to log when products change
+  useEffect(() => {
+    console.log("Products state updated:", products);
+  }, [products]);
+  
+  // Update the listKey to include the addedCount
+  const listKey = `products-${products.length}-${addedCount}-${Date.now()}`;
 
   const filteredProducts = products.filter((product) => {
     const searchLower = searchQuery.toLowerCase()
@@ -96,28 +106,62 @@ export default function InventoryPage() {
   })
 
   const handleAddProduct = (newProductData: any) => {
+    // Check for required fields
+    if (!newProductData.name) {
+      toast.error("Product name is required");
+      return;
+    }
+    
+    if (typeof newProductData.price !== 'number' || newProductData.price < 0) {
+      toast.error("Valid product price is required");
+      return;
+    }
+
     // Convert the product data to match our Product interface
     const newProduct = {
       name: newProductData.name || '',
       price: newProductData.price || 0,
       quantity: newProductData.stock || 0,
-      minStockLevel: newProductData.lowStockThreshold,
-      description: newProductData.description,
-      sku: newProductData.sku,
-      barcode: newProductData.barcode,
-      cost: newProductData.costPrice,
-      brand: newProductData.vendor,
-      model: newProductData.model,
-      serialNumber: newProductData.serialNumber,
+      minStockLevel: newProductData.lowStockThreshold || 5,
+      description: newProductData.description || '',
+      sku: newProductData.sku || null,
+      barcode: newProductData.barcode || null,
+      cost: newProductData.costPrice || 0,
+      brand: newProductData.vendor || null,
+      model: newProductData.model || null,
+      // Handle serial number correctly - use null for empty strings
+      serialNumber: newProductData.serialNumber && newProductData.serialNumber.trim() !== '' 
+        ? newProductData.serialNumber 
+        : null,
       status: (newProductData.stock === 0 ? 'out_of_stock' : 'active') as 'out_of_stock' | 'active',
-      color: newProductData.color,
-      storage: newProductData.storage,
-      condition: newProductData.condition
+      color: newProductData.color || null,
+      storage: newProductData.storage || null,
+      condition: newProductData.condition || 'new',
+      // Add timestamps
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
     
-    // Dispatch the create product action
-    dispatch(createProduct(newProduct));
-    setShowAddDialog(false);
+    console.log("Adding product:", newProduct);
+    
+    // Dispatch the create product action and handle the result
+    dispatch(createProduct(newProduct))
+      .unwrap()
+      .then(() => {
+        // Product added successfully, now refresh the product list
+        console.log("Product added, refreshing list");
+        dispatch(fetchProducts());
+        
+        // Increment counter to trigger re-render
+        setAddedCount(prev => prev + 1);
+        
+        // Show success message
+        toast.success(`${newProduct.name} added to inventory`);
+      })
+      .catch((error) => {
+        console.error("Failed to add product:", error);
+        toast.error(`Failed to add product: ${error.message || "Unknown error"}`);
+      });
   }
 
   const getStockStatusBadge = (product: Product) => {
@@ -135,13 +179,13 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+    <div className="space-y-6" suppressHydrationWarning>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" suppressHydrationWarning>
+        <div suppressHydrationWarning>
           <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
           <p className="text-muted-foreground">Manage your product inventory</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" suppressHydrationWarning>
           <Button onClick={() => setShowAddDialog(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Product
@@ -167,26 +211,27 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-6">
-          <Tabs defaultValue="all" value={activeFilter} onValueChange={setActiveFilter}>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-              <TabsList>
+      <Card suppressHydrationWarning>
+        <CardContent className="p-6" suppressHydrationWarning>
+          <Tabs defaultValue="all" value={activeFilter} onValueChange={setActiveFilter} suppressHydrationWarning>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6" suppressHydrationWarning>
+              <TabsList suppressHydrationWarning>
                 <TabsTrigger value="all">All Products</TabsTrigger>
                 <TabsTrigger value="low-stock">Low Stock</TabsTrigger>
                 <TabsTrigger value="out-of-stock">Out of Stock</TabsTrigger>
                 <TabsTrigger value="phones">Phones</TabsTrigger>
                 <TabsTrigger value="accessories">Accessories</TabsTrigger>
               </TabsList>
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-2" suppressHydrationWarning>
+                <div className="relative" suppressHydrationWarning>
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" suppressHydrationWarning />
                   <Input
                     type="search"
                     placeholder="Search products..."
                     className="pl-8 w-full sm:w-[300px]"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    suppressHydrationWarning
                   />
                 </div>
                 <DropdownMenu>
@@ -207,30 +252,30 @@ export default function InventoryPage() {
               </div>
             </div>
 
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead></TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>SKU</TableHead>
-                    <TableHead>Specs</TableHead>
-                    <TableHead>Stock</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Brand</TableHead>
+            <div className="rounded-md border" key={listKey} suppressHydrationWarning>
+              <Table suppressHydrationWarning>
+                <TableHeader suppressHydrationWarning>
+                  <TableRow suppressHydrationWarning>
+                    <TableHead suppressHydrationWarning></TableHead>
+                    <TableHead suppressHydrationWarning>Name</TableHead>
+                    <TableHead suppressHydrationWarning>SKU</TableHead>
+                    <TableHead suppressHydrationWarning>Specs</TableHead>
+                    <TableHead suppressHydrationWarning>Stock</TableHead>
+                    <TableHead suppressHydrationWarning>Price</TableHead>
+                    <TableHead suppressHydrationWarning>Status</TableHead>
+                    <TableHead suppressHydrationWarning>Brand</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody suppressHydrationWarning>
                   {isLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center">
+                    <TableRow suppressHydrationWarning>
+                      <TableCell colSpan={8} className="text-center" suppressHydrationWarning>
                         Loading products...
                       </TableCell>
                     </TableRow>
                   ) : filteredProducts.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center">
+                    <TableRow suppressHydrationWarning>
+                      <TableCell colSpan={8} className="text-center" suppressHydrationWarning>
                         No products found. {products.length > 0 ? 'Try a different search.' : 'Add your first product!'}
                       </TableCell>
                     </TableRow>
@@ -240,37 +285,39 @@ export default function InventoryPage() {
                         key={product.id}
                         onClick={() => selectProduct(product)}
                         className="cursor-pointer"
+                        suppressHydrationWarning
                       >
-                        <TableCell>
-                          <div className="w-8 h-8 bg-muted rounded flex items-center justify-center">
+                        <TableCell suppressHydrationWarning>
+                          <div className="w-8 h-8 bg-muted rounded flex items-center justify-center" suppressHydrationWarning>
                             <img
                               src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
                                 product.name
                               )}&background=random`}
                               alt={product.name}
                               className="w-full h-full object-cover rounded"
+                              suppressHydrationWarning
                             />
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell>{product.sku || '-'}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            {product.color && <span className="text-xs text-muted-foreground">Color: {product.color}</span>}
-                            {product.storage && <span className="text-xs text-muted-foreground">Storage: {product.storage}</span>}
+                        <TableCell className="font-medium" suppressHydrationWarning>{product.name}</TableCell>
+                        <TableCell suppressHydrationWarning>{product.sku || '-'}</TableCell>
+                        <TableCell suppressHydrationWarning>
+                          <div className="flex flex-col" suppressHydrationWarning>
+                            {product.color && <span className="text-xs text-muted-foreground" suppressHydrationWarning>Color: {product.color}</span>}
+                            {product.storage && <span className="text-xs text-muted-foreground" suppressHydrationWarning>Storage: {product.storage}</span>}
                             {product.condition && (
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-xs text-muted-foreground" suppressHydrationWarning>
                                 Condition: {product.condition === 'new' ? 'Brand New' : 
                                             product.condition === 'pre-owned' ? 'Pre-Owned' : 'Refurbished'}
                               </span>
                             )}
-                            {product.serialNumber && <span className="text-xs text-muted-foreground">SN: {product.serialNumber}</span>}
+                            {product.serialNumber && <span className="text-xs text-muted-foreground" suppressHydrationWarning>SN: {product.serialNumber}</span>}
                           </div>
                         </TableCell>
-                        <TableCell>{product.quantity}</TableCell>
-                        <TableCell>{formatCurrency(product.price)}</TableCell>
-                        <TableCell>{getStockStatusBadge(product)}</TableCell>
-                        <TableCell>{product.brand || '-'}</TableCell>
+                        <TableCell suppressHydrationWarning>{product.quantity}</TableCell>
+                        <TableCell suppressHydrationWarning>{formatCurrency(product.price)}</TableCell>
+                        <TableCell suppressHydrationWarning>{getStockStatusBadge(product)}</TableCell>
+                        <TableCell suppressHydrationWarning>{product.brand || '-'}</TableCell>
                       </TableRow>
                     ))
                   )}
@@ -282,7 +329,19 @@ export default function InventoryPage() {
       </Card>
 
       {showAddDialog && (
-        <AddProductDialog open={showAddDialog} onClose={() => setShowAddDialog(false)} onAdd={handleAddProduct} />
+        <AddProductDialog 
+          open={showAddDialog} 
+          onClose={() => {
+            console.log("Closing add product dialog");
+            // Force a refresh when closing the dialog just to be sure
+            dispatch(fetchProducts());
+            setShowAddDialog(false);
+          }} 
+          onAdd={(product) => {
+            console.log("Adding product from dialog:", product);
+            handleAddProduct(product);
+          }} 
+        />
       )}
 
       {selectedProduct && (

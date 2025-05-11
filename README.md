@@ -1,6 +1,62 @@
-# Modern POS System
+# GadgetTrack POS System
 
-A modern Point of Sale (POS) system built with Next.js, TypeScript, and Tailwind CSS.
+A modern Point of Sale system for gadget retailers with inventory management, customer tracking, and installment payment features.
+
+## Project Structure
+
+This project is built with:
+- Next.js frontend
+- Redux Toolkit for state management
+- IndexedDB for offline data storage
+- Tailwind CSS for styling
+- TypeScript for type safety
+
+## Key Features
+
+- **Inventory Management**: Track products, categories, and stock levels
+- **Customer Management**: Store customer information and purchase history
+- **Sales Processing**: Create and manage sales transactions
+- **Payment Tracking**: Handle full payments and installment plans
+- **Offline Capability**: Full functionality without internet using IndexedDB
+- **Responsive Design**: Works on desktop and tablet devices
+
+## Recently Completed
+
+- Consolidated project structure (merged from previous versions)
+- Implemented Redux state management integration
+- Connected detailed database models with IndexedDB
+- Improved UI components with modern design
+
+## Getting Started
+
+1. Install dependencies:
+   ```bash
+   npm install --legacy-peer-deps
+   ```
+
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## Project Organization
+
+- `/app`: Next.js app router pages
+- `/components`: UI components
+- `/lib`: Utilities and database functions
+  - `/lib/db.ts`: IndexedDB implementation
+  - `/lib/models`: Database model definitions
+- `/store`: Redux store configuration
+  - `/store/slices`: Redux slices for different data entities
+
+## Development Roadmap
+
+- Complete the Redux implementation for all entity types
+- Connect UI components to real data instead of mock data
+- Implement full offline sync capabilities
+- Add reporting and analytics features
 
 ## Features
 
@@ -38,36 +94,6 @@ A modern Point of Sale (POS) system built with Next.js, TypeScript, and Tailwind
 - **UI Components:** shadcn/ui
 - **State Management:** React Hooks
 - **Database:** Local Storage (can be extended to any database)
-
-## Getting Started
-
-1. Clone the repository:
-   ```bash
-   git clone [repository-url]
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
-
-4. Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## Project Structure
-
-```
-POS/
-├── app/                # Next.js app router pages
-├── components/         # React components
-├── lib/               # Utility functions
-├── public/            # Static assets
-└── types/             # TypeScript types
-```
 
 ## Contributing
 

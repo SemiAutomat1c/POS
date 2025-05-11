@@ -11,6 +11,7 @@ export interface Product {
   cost?: number;
   quantity: number;
   minStockLevel?: number;
+  lowStockThreshold?: number; // Threshold for low stock notifications
   brand?: string;
   model?: string;
   serialNumber?: string;

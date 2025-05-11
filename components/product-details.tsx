@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { useState } from "react"
 import { Product, StockMovement } from "@/types"
 import {
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Package,
   Truck,
@@ -22,13 +24,26 @@ import {
   Plus,
   Minus,
   Settings,
+  Barcode,
+  InfoIcon,
 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface ProductDetailsProps {
   product: Product
   isOpen: boolean
   onClose: () => void
+}
+
+interface SerialItem {
+  serialNumber: string
+  barcode: string
 }
 
 export function ProductDetails({ product, isOpen, onClose }: ProductDetailsProps) {
@@ -55,6 +70,29 @@ export function ProductDetails({ product, isOpen, onClose }: ProductDetailsProps
     },
   ])
 
+  // Check if product has serialized items
+  const hasMultipleSerials = product.specifications && 
+                          typeof product.specifications === 'object' &&
+                          'serialItems' in product.specifications && 
+                          typeof product.specifications.serialItems === 'string';
+  
+  // Parse the serial items
+  const serialItems: SerialItem[] = hasMultipleSerials && product.specifications
+    ? JSON.parse(product.specifications.serialItems as string)
+    : [];
+
+  // Check if a serial number is a generated placeholder (starts with PO-)
+  const isPlaceholderSerial = (serial: string) => {
+    return serial && serial.startsWith("PO-");
+  };
+
+  // Determine the type of serial number for display
+  const getSerialBadgeType = (serial: string) => {
+    if (!serial) return "none";
+    if (isPlaceholderSerial(serial)) return "placeholder";
+    return "original";
+  };
+
   const getStockStatusColor = (status: Product["status"]) => {
     switch (status) {
       case "in-stock":
@@ -63,6 +101,18 @@ export function ProductDetails({ product, isOpen, onClose }: ProductDetailsProps
         return "bg-yellow-500/10 text-yellow-500"
       case "out-of-stock":
         return "bg-red-500/10 text-red-500"
+      default:
+        return "bg-gray-500/10 text-gray-500"
+    }
+  }
+
+  // Get badge color for serial type
+  const getSerialBadgeColor = (type: string) => {
+    switch (type) {
+      case "original":
+        return "bg-blue-500/10 text-blue-500"
+      case "placeholder":
+        return "bg-amber-500/10 text-amber-500"
       default:
         return "bg-gray-500/10 text-gray-500"
     }
@@ -102,8 +152,28 @@ export function ProductDetails({ product, isOpen, onClose }: ProductDetailsProps
                       <dd className="text-sm">{product.category}</dd>
                     </div>
                     <div>
-                      <dt className="text-sm font-medium text-muted-foreground">Serial/IMEI</dt>
-                      <dd className="text-sm">{product.serialNumber}</dd>
+                      <dt className="flex items-center gap-1">
+                        <span className="text-sm font-medium text-muted-foreground">Serial/IMEI</span>
+                        {product.serialNumber && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Badge className={getSerialBadgeColor(getSerialBadgeType(product.serialNumber))}>
+                                  {getSerialBadgeType(product.serialNumber) === "placeholder" ? "Store ID" : "Original"}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {getSerialBadgeType(product.serialNumber) === "placeholder" 
+                                ? "This is a store-generated identifier" 
+                                : "Original manufacturer serial number"}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </dt>
+                      <dd className="text-sm break-all">
+                        {product.serialNumber || (hasMultipleSerials ? "Multiple (see below)" : "—")}
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-sm font-medium text-muted-foreground">Vendor</dt>
@@ -176,36 +246,84 @@ export function ProductDetails({ product, isOpen, onClose }: ProductDetailsProps
                   </dl>
                 </CardContent>
               </Card>
+            
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Pricing</CardTitle>
+                  <BarChart className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <dl className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <dt className="text-sm font-medium text-muted-foreground">Selling Price</dt>
+                      <dd className="text-sm font-medium">{formatCurrency(product.price)}</dd>
+                    </div>
+                    {product.costPrice && (
+                      <div className="flex items-center justify-between">
+                        <dt className="text-sm font-medium text-muted-foreground">Cost Price</dt>
+                        <dd className="text-sm">{formatCurrency(product.costPrice)}</dd>
+                      </div>
+                    )}
+                    {product.costPrice && (
+                      <div className="flex items-center justify-between">
+                        <dt className="text-sm font-medium text-muted-foreground">Profit Margin</dt>
+                        <dd className="text-sm text-green-500">
+                          {(((product.price - product.costPrice) / product.costPrice) * 100).toFixed(2)}%
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
+                </CardContent>
+              </Card>
             </div>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pricing</CardTitle>
-                <BarChart className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <dl className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <dt className="text-sm font-medium text-muted-foreground">Selling Price</dt>
-                    <dd className="text-sm font-medium">{formatCurrency(product.price)}</dd>
+            {hasMultipleSerials && serialItems.length > 0 && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-sm font-medium">Serial Numbers & Barcodes</CardTitle>
+                    {product.condition !== 'new' && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="w-64">
+                              Some items may use store-generated identifiers (PO-prefix) if the original
+                              serial numbers were not available for pre-owned or refurbished items.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </div>
-                  {product.costPrice && (
-                    <div className="flex items-center justify-between">
-                      <dt className="text-sm font-medium text-muted-foreground">Cost Price</dt>
-                      <dd className="text-sm">{formatCurrency(product.costPrice)}</dd>
+                  <Barcode className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-40 w-full rounded-md border">
+                    <div className="grid grid-cols-[1fr_1fr_auto] gap-2 p-4">
+                      <div className="font-medium text-sm">Serial/IMEI</div>
+                      <div className="font-medium text-sm">Barcode</div>
+                      <div className="font-medium text-sm">Type</div>
+                      {serialItems.map((item, index) => (
+                        <React.Fragment key={`serial-item-${index}`}>
+                          <div className="text-sm break-all">{item.serialNumber || "—"}</div>
+                          <div className="text-sm break-all">{item.barcode || "—"}</div>
+                          <div>
+                            {item.serialNumber && (
+                              <Badge className={getSerialBadgeColor(getSerialBadgeType(item.serialNumber))}>
+                                {getSerialBadgeType(item.serialNumber) === "placeholder" ? "Store ID" : "Original"}
+                              </Badge>
+                            )}
+                          </div>
+                        </React.Fragment>
+                      ))}
                     </div>
-                  )}
-                  {product.costPrice && (
-                    <div className="flex items-center justify-between">
-                      <dt className="text-sm font-medium text-muted-foreground">Profit Margin</dt>
-                      <dd className="text-sm text-green-500">
-                        {(((product.price - product.costPrice) / product.costPrice) * 100).toFixed(2)}%
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-              </CardContent>
-            </Card>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="stock" className="space-y-4">
@@ -230,27 +348,22 @@ export function ProductDetails({ product, isOpen, onClose }: ProductDetailsProps
                   <div className="p-4">
                     <h4 className="text-sm font-medium">Recent Stock Movements</h4>
                   </div>
-                  <div className="divide-y">
+                  <div className="border-t">
                     {stockMovements.map((movement) => (
-                      <div key={movement.id} className="flex items-center justify-between p-4">
-                        <div>
-                          <p className="font-medium">
-                            {movement.type === "in" ? "Stock Added" : "Stock Removed"}
-                          </p>
+                      <div key={movement.id} className="flex items-center p-4 border-b last:border-b-0">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            {movement.type === "in" ? (
+                              <Badge className="bg-green-500/10 text-green-500">In</Badge>
+                            ) : (
+                              <Badge className="bg-blue-500/10 text-blue-500">Out</Badge>
+                            )}
+                            <span className="font-medium">{movement.quantity} units</span>
+                          </div>
                           <p className="text-sm text-muted-foreground">{movement.reason}</p>
                         </div>
-                        <div className="text-right">
-                          <p
-                            className={`font-medium ${
-                              movement.type === "in" ? "text-green-500" : "text-red-500"
-                            }`}
-                          >
-                            {movement.type === "in" ? "+" : "-"}
-                            {movement.quantity}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(movement.date).toLocaleDateString()}
-                          </p>
+                        <div className="text-sm text-muted-foreground">
+                          {new Date(movement.date).toLocaleDateString()}
                         </div>
                       </div>
                     ))}
