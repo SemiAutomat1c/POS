@@ -22,17 +22,19 @@ export default function DatabaseProvider({ children }: DatabaseProviderProps) {
           setInitialized(true);
         } else {
           console.error('Database initialization failed');
-          setError('Failed to initialize database');
+          setError('Failed to initialize database - initialization returned false');
           toast.error('Database initialization failed', {
             description: 'Please refresh the page to try again',
             duration: 5000,
           });
         }
       } catch (err) {
-        console.error('Error initializing database:', err);
-        setError(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        console.error('Error initializing database:', errorMessage);
+        console.error('Error details:', err);
+        setError(`Database error: ${errorMessage}`);
         toast.error('Database error', {
-          description: 'Please check console for details',
+          description: errorMessage,
           duration: 5000,
         });
       }
