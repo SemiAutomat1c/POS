@@ -1,15 +1,16 @@
 'use client';
 
 import React from 'react';
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from 'next-themes';
 import { Provider as ReduxProvider } from 'react-redux';
-import { store } from '@/store/store';
+import { store } from '@/store';
+import DatabaseProvider from './database-provider';
 
-export default function ClientProviders({ 
-  children 
-}: { 
-  children: React.ReactNode 
-}) {
+interface ClientProvidersProps {
+  children: React.ReactNode;
+}
+
+export default function ClientProviders({ children }: ClientProvidersProps) {
   return (
     <ReduxProvider store={store}>
       <ThemeProvider
@@ -18,7 +19,9 @@ export default function ClientProviders({
         enableSystem
         disableTransitionOnChange
       >
-        {children}
+        <DatabaseProvider>
+          {children}
+        </DatabaseProvider>
       </ThemeProvider>
     </ReduxProvider>
   );

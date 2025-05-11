@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+'use client';
+
+import { useState, useEffect, useRef, useCallback, useTransition } from 'react';
 import { Bell } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -21,13 +23,21 @@ import {
 } from '@/store/slices/notificationSlice';
 import NotificationItem from './notification-item';
 import { Notification } from '@/lib/models/Notification';
+import { toast } from 'sonner';
 
 export default function NotificationBell() {
   const dispatch = useAppDispatch();
   const { items: notifications, unreadCount, status } = useAppSelector(state => state.notifications);
   const [open, setOpen] = useState(false);
   const [localUnreadCount, setLocalUnreadCount] = useState(0);
+  const [prevUnreadCount, setPrevUnreadCount] = useState(0); // Track previous unread count
   const badgeRef = useRef<HTMLDivElement>(null);
+  const [updateKey, setUpdateKey] = useState(0);
+  const [isPending, startTransition] = useTransition();
+  
+  const forceUpdate = useCallback(() => {
+    setUpdateKey(prev => prev + 1);
+  }, []);
   
   // Initialize notifications on mount and set up polling
   useEffect(() => {
@@ -36,29 +46,83 @@ export default function NotificationBell() {
     // Initial fetch of notifications
     dispatch(fetchNotifications());
     
-    // Only check low stock items once at startup to avoid constant changes
+    // Check low stock items at startup
     dispatch(checkLowStockItems());
     
-    // Set up regular polling for notifications, but not too frequently
+    // Set up regular polling for notifications and low stock items
     const pollInterval = setInterval(() => {
       if (!open) { // Only poll when dropdown is closed
-        dispatch(fetchNotifications());
+        // First check for low stock items
+        dispatch(checkLowStockItems()).then(() => {
+          // Then fetch all notifications
+          dispatch(fetchNotifications());
+        });
       }
-    }, 15000); // 15 seconds
+    }, 30000); // 30 seconds
     
     return () => clearInterval(pollInterval);
-  }, [dispatch]);
+  }, [dispatch, open]);
   
   // Update local unread count when Redux state changes
   useEffect(() => {
+    // Add diagnostic to log every notification we have
+    console.group('📋 Current Notifications Update');
+    console.log(`Previous unread count: ${prevUnreadCount}, New unread count: ${unreadCount}`);
+    
+    if (unreadCount > 0) {
+      console.log('All unread notifications:');
+      notifications
+        .filter(n => !n.isRead)
+        .forEach(n => {
+          console.log(`ID: ${n.id} | Type: ${n.type} | Title: "${n.title}" | RelatedItem: ${n.relatedItemId} | Created: ${new Date(n.createdAt).toLocaleString()}`);
+        });
+    }
+    
+    // Detect if we have new notifications
+    if (unreadCount > prevUnreadCount && prevUnreadCount !== 0) {
+      console.log("🔔 New notifications detected:", unreadCount - prevUnreadCount);
+      
+      // Get just the new notifications
+      const newNotifications = notifications.filter(n => 
+        !n.isRead && 
+        // Use a time-based approach - notifications created in the last 30 seconds
+        (new Date().getTime() - new Date(n.createdAt).getTime() < 30000)
+      );
+      
+      console.log("Recently created notifications:", newNotifications.length);
+      newNotifications.forEach(n => {
+        console.log(`New notification: ID=${n.id}, Title="${n.title}", Message="${n.message}"`);
+      });
+      
+      // Show a toast notification
+      toast("New notifications", {
+        description: `You have ${unreadCount - prevUnreadCount} new notification${unreadCount - prevUnreadCount > 1 ? 's' : ''}`,
+        action: {
+          label: "View",
+          onClick: () => setOpen(true)
+        }
+      });
+      
+      // Auto-open the dropdown after a short delay to ensure it's visible
+      setTimeout(() => {
+        setOpen(true);
+      }, 500);
+    }
+    
+    // Update local state
     setLocalUnreadCount(unreadCount);
+    setPrevUnreadCount(unreadCount);
     console.log("Updated local unread count:", unreadCount);
-  }, [unreadCount]);
+    console.groupEnd();
+  }, [unreadCount, prevUnreadCount, notifications]);
   
   // Ensure fresh data when opening dropdown
   useEffect(() => {
     if (open) {
-      dispatch(fetchNotifications());
+      // Check for low stock items first, then fetch notifications
+      dispatch(checkLowStockItems()).then(() => {
+        dispatch(fetchNotifications());
+      });
     }
   }, [open, dispatch]);
 
@@ -84,6 +148,12 @@ export default function NotificationBell() {
     try {
       console.log('Notification is unread, marking as read...');
       
+      // Update local state optimistically
+      setLocalUnreadCount(prev => Math.max(0, prev - 1));
+      
+      // Close dropdown right away for better UX
+      setOpen(false);
+      
       // Mark as read in Redux
       console.log('Dispatching markAsRead action...');
       await dispatch(markAsRead(notification.id)).unwrap();
@@ -91,6 +161,11 @@ export default function NotificationBell() {
       
       // Force a refresh of all notifications to ensure consistent state
       await dispatch(fetchNotifications()).unwrap();
+      
+      // Use startTransition for smoother UI updates
+      startTransition(() => {
+        forceUpdate();
+      });
       
       console.log('Successfully completed all steps for marking notification as read:', notification.id);
       
@@ -104,6 +179,9 @@ export default function NotificationBell() {
       
       // Restore state by forcing refresh
       dispatch(fetchNotifications());
+      startTransition(() => {
+        forceUpdate();
+      });
     } finally {
       console.log('===== END Notification Click =====');
     }
@@ -142,7 +220,11 @@ export default function NotificationBell() {
           
           // When opening the dropdown, force refresh
           if (isOpen) {
-            dispatch(fetchNotifications());
+            // Check for low stock items first
+            dispatch(checkLowStockItems()).then(() => {
+              // Then fetch all notifications
+              dispatch(fetchNotifications());
+            });
           }
         }
       }}
@@ -171,32 +253,20 @@ export default function NotificationBell() {
                 variant="ghost" 
                 size="sm" 
                 className="text-xs h-7"
-                onClick={async (e) => {
+                onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   
-                  try {
-                    console.log('Marking all notifications as read...');
-                    
-                    // First close dropdown
-                    setOpen(false);
-                    
-                    // Mark all as read
-                    await dispatch(markAllAsRead()).unwrap();
-                    
-                    // Set local count to zero
-                    setLocalUnreadCount(0);
-                    
-                    // Refresh notifications to ensure consistent state
+                  // Update optimistically
+                  setLocalUnreadCount(0);
+                  
+                  // Perform the actual update
+                  dispatch(markAllAsRead()).then(() => {
                     dispatch(fetchNotifications());
-                    
-                    console.log('Successfully marked all notifications as read');
-                  } catch (error) {
-                    console.error('Error marking all as read:', error);
-                    
-                    // Refresh to ensure correct state
-                    dispatch(fetchNotifications());
-                  }
+                    startTransition(() => {
+                      forceUpdate();
+                    });
+                  });
                 }}
               >
                 Mark all as read
@@ -232,7 +302,13 @@ export default function NotificationBell() {
                   // Close the dropdown immediately
                   setOpen(false);
                   
-                  // Only then handle the notification click
+                  // Update local unread count optimistically for immediate feedback
+                  if (!notification.isRead) {
+                    setLocalUnreadCount(prev => Math.max(0, prev - 1));
+                  }
+                  
+                  // Handle the notification click with a slight delay
+                  // to avoid UI freezing during the state update
                   setTimeout(() => {
                     handleNotificationClick(notification);
                   }, 10);

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Search, Filter, Download, Upload } from "lucide-react"
+import { Plus, Search, Filter, Download, Upload, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -20,7 +20,8 @@ import { ProductDetails } from "@/components/product-details"
 import AddProductDialog from "@/components/add-product-dialog"
 import { formatCurrency } from "@/lib/utils"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { fetchProducts, createProduct } from "@/store/slices/productSlice"
+import { fetchProducts, createProduct, modifyProduct, removeProduct } from "@/store/slices/productSlice"
+import { checkLowStockItems } from "@/store/slices/notificationSlice"
 import type { Product } from "@/lib/models/Product"
 import type { Product as LegacyProduct } from "@/types"
 import { toast } from "sonner"
@@ -151,6 +152,10 @@ export default function InventoryPage() {
         // Product added successfully, now refresh the product list
         console.log("Product added, refreshing list");
         dispatch(fetchProducts());
+        
+        // Check if this product is low in stock and generate notifications if needed
+        console.log("Checking for low stock notifications after adding product");
+        dispatch(checkLowStockItems());
         
         // Increment counter to trigger re-render
         setAddedCount(prev => prev + 1);
