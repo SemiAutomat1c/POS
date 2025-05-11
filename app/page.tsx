@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Package, ShoppingCart, Users, AlertTriangle, TrendingUp, RefreshCw } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Package, ShoppingCart, Users, AlertTriangle, TrendingUp, RefreshCw, Tag, Truck, Plus } from "lucide-react"
 import { initializeDB } from "@/lib/db"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -11,12 +11,14 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { fetchProducts } from "@/store/slices/productSlice"
 import { fetchSales } from "@/store/slices/saleSlice"
 import { fetchCustomers } from "@/store/slices/customerSlice"
+import { useRouter } from "next/navigation"
 
 export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const { toast } = useToast()
   const dispatch = useAppDispatch()
+  const router = useRouter()
   
   // Get data from Redux store
   const products = useAppSelector((state) => state.products.items)
@@ -164,6 +166,72 @@ export default function Dashboard() {
           description="awaiting payment"
           color="text-amber-500"
         />
+      </div>
+
+      {/* Quick Actions Section */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">Quick Actions</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="hover:bg-accent/10 cursor-pointer transition-colors">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Add Product</CardTitle>
+              <CardDescription>Add a new product to inventory</CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center pb-2">
+              <Package className="h-10 w-10 text-primary/60" />
+            </CardContent>
+            <CardFooter>
+              <Button className="w-full" onClick={() => router.push("/inventory?action=add-product")}>
+                <Plus className="mr-2 h-4 w-4" /> Add Product
+              </Button>
+            </CardFooter>
+          </Card>
+
+          <Card className="hover:bg-accent/10 cursor-pointer transition-colors">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Product with Variants</CardTitle>
+              <CardDescription>Manage product variations</CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center pb-2">
+              <Tag className="h-10 w-10 text-primary/60" />
+            </CardContent>
+            <CardFooter>
+              <Button className="w-full" variant="outline" onClick={() => router.push("/inventory?action=add-variants")}>
+                <Plus className="mr-2 h-4 w-4" /> Create Variants
+              </Button>
+            </CardFooter>
+          </Card>
+
+          <Card className="hover:bg-accent/10 cursor-pointer transition-colors">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">New Sale</CardTitle>
+              <CardDescription>Start a new point of sale transaction</CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center pb-2">
+              <ShoppingCart className="h-10 w-10 text-primary/60" />
+            </CardContent>
+            <CardFooter>
+              <Button className="w-full" variant="outline" onClick={() => router.push("/sales")}>
+                Start Sale
+              </Button>
+            </CardFooter>
+          </Card>
+
+          <Card className="hover:bg-accent/10 cursor-pointer transition-colors">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Inventory Management</CardTitle>
+              <CardDescription>Check and update stock levels</CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center pb-2">
+              <Truck className="h-10 w-10 text-primary/60" />
+            </CardContent>
+            <CardFooter>
+              <Button className="w-full" variant="outline" onClick={() => router.push("/inventory")}>
+                Manage Inventory
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

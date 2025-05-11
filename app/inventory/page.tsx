@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Plus, Search, Filter, Download, Upload, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -63,12 +64,23 @@ export default function InventoryPage() {
   const dispatch = useAppDispatch()
   const { items: products, status } = useAppSelector((state) => state.products)
   const isLoading = status === 'loading'
+  const searchParams = useSearchParams()
   
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<LegacyProduct | null>(null)
   const [activeFilter, setActiveFilter] = useState("all")
   const [addedCount, setAddedCount] = useState(0)
+
+  // Check if we should show the add dialog based on URL parameters
+  useEffect(() => {
+    if (searchParams) {
+      const action = searchParams.get('action')
+      if (action === 'add-product' || action === 'add-variants') {
+        setShowAddDialog(true)
+      }
+    }
+  }, [searchParams])
 
   useEffect(() => {
     const loadData = async () => {
