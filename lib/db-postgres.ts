@@ -5,9 +5,39 @@ import type { Customer } from './models/Customer';
 import type { Sale } from './models/Sale';
 import type { Return, StoreCredit } from './models/Return';
 
+// Log environment variable status (without exposing sensitive information)
+console.log('PostgreSQL Module Loaded');
+console.log('Checking Postgres Environment Variables:');
+console.log('POSTGRES_URL exists:', typeof process.env.POSTGRES_URL === 'string');
+console.log('POSTGRES_USER exists:', typeof process.env.POSTGRES_USER === 'string');
+console.log('POSTGRES_HOST exists:', typeof process.env.POSTGRES_HOST === 'string');
+console.log('POSTGRES_PASSWORD exists:', typeof process.env.POSTGRES_PASSWORD ? 'Yes' : 'No');
+console.log('POSTGRES_DATABASE exists:', typeof process.env.POSTGRES_DATABASE === 'string');
+console.log('NEXT_PUBLIC_VERCEL_ENV:', process.env.NEXT_PUBLIC_VERCEL_ENV);
+
+// Validate the SQL client can connect
+async function validateConnection() {
+  try {
+    const result = await sql`SELECT 1 as connection_test`;
+    console.log('PostgreSQL connection test successful:', result.rows[0]);
+    return true;
+  } catch (error) {
+    console.error('PostgreSQL connection test failed:', error);
+    return false;
+  }
+}
+
 // Initialize database tables if they don't exist
 export async function initializeDB() {
   try {
+    console.log('PostgreSQL: Attempting to initialize database');
+    
+    // First check if we can connect
+    const canConnect = await validateConnection();
+    if (!canConnect) {
+      throw new Error('Cannot connect to PostgreSQL database - check connection variables');
+    }
+    
     // Create products table
     await sql`
       CREATE TABLE IF NOT EXISTS products (

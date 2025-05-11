@@ -8,11 +8,35 @@ import type { Notification } from './models/Notification';
 import * as localDB from './db-models';
 import * as postgresDB from './db-postgres';
 
+// More robust environment detection
+function isProductionEnvironment() {
+  const vercelEnv = process.env.NEXT_PUBLIC_VERCEL_ENV;
+  const isProd = vercelEnv === 'production';
+  
+  console.log('DB Adapter - Environment Check:');
+  console.log('NEXT_PUBLIC_VERCEL_ENV:', vercelEnv);
+  console.log('Is Production?', isProd);
+  
+  // Check for required Postgres environment variables in production
+  if (isProd) {
+    const hasPgUrl = typeof process.env.POSTGRES_URL === 'string';
+    console.log('Has POSTGRES_URL?', hasPgUrl);
+    
+    if (!hasPgUrl) {
+      console.error('WARNING: Production environment detected but POSTGRES_URL is missing');
+    }
+  }
+  
+  return isProd;
+}
+
 // Determine if we're in a production environment (Vercel)
-const isProduction = process.env.NEXT_PUBLIC_VERCEL_ENV === 'production';
+const isProduction = isProductionEnvironment();
 
 // Use the appropriate database implementation based on environment
 const db = isProduction ? postgresDB : localDB;
+
+console.log(`DB Adapter - Using ${isProduction ? 'Postgres' : 'IndexedDB'} implementation`);
 
 // Re-export all database functions
 export const initializeDB = db.initializeDB;
