@@ -42,8 +42,9 @@ const STORES = {
 // Check if we're in a browser environment
 const isBrowser = typeof window !== 'undefined';
 
-// Singleton instance
+// Singleton instance and initialization promise
 let dbInstance: IDBDatabase | null = null;
+let dbInitPromise: Promise<IDBDatabase> | null = null;
 
 // Initialize the database
 export const initializeDB = (): Promise<IDBDatabase> => {
@@ -58,7 +59,13 @@ export const initializeDB = (): Promise<IDBDatabase> => {
     return Promise.resolve(dbInstance);
   }
 
-  return new Promise((resolve, reject) => {
+  // Return existing initialization promise if it exists
+  if (dbInitPromise) {
+    return dbInitPromise;
+  }
+
+  // Create new initialization promise
+  dbInitPromise = new Promise((resolve, reject) => {
     // Check if IndexedDB is supported
     if (!window.indexedDB) {
       reject(new Error("Your browser doesn't support IndexedDB. The app will not work offline."));
@@ -70,12 +77,28 @@ export const initializeDB = (): Promise<IDBDatabase> => {
     request.onerror = (event) => {
       const error = (event.target as IDBOpenDBRequest).error;
       console.error("Database error:", error);
+      dbInitPromise = null; // Clear the promise so we can try again
       reject(new Error("Database error: " + error?.message || "Unknown error"));
     }
 
     request.onsuccess = (event) => {
       dbInstance = (event.target as IDBOpenDBRequest).result;
       console.log("Database initialized successfully");
+
+      // Handle connection loss
+      dbInstance.onclose = () => {
+        console.log("Database connection closed");
+        dbInstance = null;
+        dbInitPromise = null;
+      };
+
+      dbInstance.onerror = (event: Event) => {
+        const target = event.target as IDBRequest;
+        console.error("Database error:", target.error);
+        dbInstance = null;
+        dbInitPromise = null;
+      };
+
       resolve(dbInstance);
     }
 
@@ -143,36 +166,48 @@ export const initializeDB = (): Promise<IDBDatabase> => {
           notificationsStore.createIndex("isRead", "isRead", { unique: false })
           notificationsStore.createIndex("priority", "priority", { unique: false })
           notificationsStore.createIndex("createdAt", "createdAt", { unique: false })
-          // Create a unique index for relatedItemId to prevent duplicates for the same product
           notificationsStore.createIndex("relatedItemId", "relatedItemId", { unique: false })
-          // Create a compound index for type and relatedItemId
           notificationsStore.createIndex("type_relatedItemId", ["type", "relatedItemId"], { unique: false })
         }
       }
     }
-  })
+  });
+
+  return dbInitPromise;
+}
+
+// Helper function to ensure database connection
+const ensureConnection = async (): Promise<IDBDatabase> => {
+  try {
+    return await initializeDB();
+  } catch (error) {
+    // Clear instance and promise if there's an error
+    dbInstance = null;
+    dbInitPromise = null;
+    throw error;
+  }
 }
 
 // General database helper functions
 export const getAll = async <T>(storeName: string): Promise<T[]> => {
-  const db = await initializeDB()
+  const db = await ensureConnection();
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([storeName], "readonly")
-    const store = transaction.objectStore(storeName)
-    const request = store.getAll()
+    const transaction = db.transaction([storeName], "readonly");
+    const store = transaction.objectStore(storeName);
+    const request = store.getAll();
 
     request.onsuccess = () => {
-      resolve(request.result)
-    }
+      resolve(request.result);
+    };
 
     request.onerror = () => {
-      reject(request.error)
-    }
-  })
+      reject(request.error);
+    };
+  });
 }
 
 export const get = async <T>(storeName: string, id: number): Promise<T | undefined> => {
-  const db = await initializeDB()
+  const db = await ensureConnection()
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([storeName], "readonly")
     const store = transaction.objectStore(storeName)
@@ -189,7 +224,7 @@ export const get = async <T>(storeName: string, id: number): Promise<T | undefin
 }
 
 export const getAllFromIndex = async <T>(storeName: string, indexName: string, indexValue: any): Promise<T[]> => {
-  const db = await initializeDB()
+  const db = await ensureConnection()
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([storeName], "readonly")
     const store = transaction.objectStore(storeName)
@@ -224,7 +259,7 @@ export const getAllFromIndex = async <T>(storeName: string, indexName: string, i
 }
 
 export const add = async <T>(storeName: string, data: T): Promise<number> => {
-  const db = await initializeDB()
+  const db = await ensureConnection()
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([storeName], "readwrite")
     const store = transaction.objectStore(storeName)
@@ -241,7 +276,7 @@ export const add = async <T>(storeName: string, data: T): Promise<number> => {
 }
 
 export const put = async <T>(storeName: string, data: T): Promise<void> => {
-  const db = await initializeDB()
+  const db = await ensureConnection()
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([storeName], "readwrite")
     const store = transaction.objectStore(storeName)
@@ -258,7 +293,7 @@ export const put = async <T>(storeName: string, data: T): Promise<void> => {
 }
 
 export const delete_ = async (storeName: string, id: number): Promise<void> => {
-  const db = await initializeDB()
+  const db = await ensureConnection()
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([storeName], "readwrite")
     const store = transaction.objectStore(storeName)

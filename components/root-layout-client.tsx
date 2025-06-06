@@ -1,28 +1,41 @@
 'use client';
 
-import React from 'react';
-import ClientProviders from "@/components/client-providers";
-import Sidebar from "@/components/sidebar";
-import Header from "@/components/header";
+import { usePathname } from "next/navigation"
+import Sidebar from "@/components/sidebar"
+import { SearchBar } from "@/components/search-bar"
+import { Bell } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { ModeToggle } from "@/components/mode-toggle"
 
-interface RootLayoutClientProps {
-  children: React.ReactNode;
-}
+export default function RootLayoutClient({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const pathname = usePathname()
+  const isMarketingPage = pathname === '/' || pathname.startsWith('/login') || pathname.startsWith('/register')
 
-export default function RootLayoutClient({ children }: RootLayoutClientProps) {
+  if (isMarketingPage) {
+    return children
+  }
+
   return (
-    <ClientProviders>
-      <div className="min-h-screen">
-        <div className="flex h-screen overflow-hidden">
-          <Sidebar />
-          <div className="flex-1 flex flex-col">
-            <Header />
-            <main className="flex-1 overflow-y-auto p-6 bg-background">
-              {children}
-            </main>
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="h-16 flex items-center justify-between px-4 border-b bg-background">
+          <SearchBar />
+          <div className="flex items-center gap-2">
+            <ModeToggle />
+            <Button variant="ghost" size="icon">
+              <Bell className="h-5 w-5" />
+            </Button>
           </div>
-        </div>
+        </header>
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
       </div>
-    </ClientProviders>
-  );
+    </div>
+  )
 } 

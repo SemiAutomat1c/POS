@@ -1,53 +1,40 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Toaster, toast } from 'sonner';
+import { toast } from 'sonner';
+import { initializeDB } from '@/lib/db-adapter';
 
 interface DatabaseProviderProps {
   children: React.ReactNode;
 }
 
 export default function DatabaseProvider({ children }: DatabaseProviderProps) {
+  // Don't check localStorage during initial render to avoid hydration mismatch
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  // Set isClient to true on mount
+  useEffect(() => {
+    setIsClient(true);
+    // Check localStorage after component mounts
+    const wasInitialized = localStorage.getItem('dbInitialized') === 'true';
+    setInitialized(wasInitialized);
+  }, []);
 
   useEffect(() => {
     const initializeDatabase = async () => {
-      try {
-        console.log('Initializing database via API...');
+      // Skip initialization if already done
+      if (initialized) {
+        return;
+      }
 
-        // Step 1: Check database status
-        const statusResponse = await fetch('/api/database/status');
-        const statusData = await statusResponse.json();
+      try {
+        // Initialize IndexedDB
+        await initializeDB();
         
-        console.log('Database status:', statusData);
-        
-        if (statusData.environment === 'production' && statusData.connectionStatus !== 'connected') {
-          console.error('Database connection failed:', statusData.error);
-          setError(`Database connection error: ${statusData.error}`);
-          toast.error('Database connection failed', {
-            description: statusData.error || 'Could not connect to PostgreSQL',
-            duration: 5000,
-          });
-          return;
-        }
-        
-        // Step 2: Initialize database
-        if (statusData.environment === 'production') {
-          const initResponse = await fetch('/api/database/initialize');
-          const initData = await initResponse.json();
-          
-          console.log('Database initialization response:', initData);
-          
-          if (!initData.success) {
-            throw new Error(initData.message || 'Failed to initialize database tables');
-          }
-        } else {
-          // For non-production, use the client-side IndexedDB
-          const { initDatabase } = await import('@/lib/db-init');
-          await initDatabase();
-        }
-        
+        // Mark as initialized in localStorage
+        localStorage.setItem('dbInitialized', 'true');
         setInitialized(true);
         console.log('Database initialized successfully');
       } catch (err) {
@@ -55,6 +42,8 @@ export default function DatabaseProvider({ children }: DatabaseProviderProps) {
         console.error('Error initializing database:', errorMessage);
         console.error('Error details:', err);
         setError(`Database error: ${errorMessage}`);
+        // Remove initialization flag if there was an error
+        localStorage.removeItem('dbInitialized');
         toast.error('Database error', {
           description: errorMessage,
           duration: 5000,
@@ -62,8 +51,16 @@ export default function DatabaseProvider({ children }: DatabaseProviderProps) {
       }
     };
 
-    initializeDatabase();
-  }, []);
+    // Only run initialization on client side
+    if (isClient && !initialized) {
+      initializeDatabase();
+    }
+  }, [initialized, isClient]);
+
+  // Don't show loading state during SSR
+  if (!isClient) {
+    return children;
+  }
 
   // Show loading state if not initialized
   if (!initialized && !error) {
@@ -74,7 +71,6 @@ export default function DatabaseProvider({ children }: DatabaseProviderProps) {
           <h2 className="text-xl font-semibold">Initializing Database...</h2>
           <p className="text-muted-foreground">Please wait while we set up the system</p>
         </div>
-        <Toaster />
       </div>
     );
   }
@@ -93,21 +89,18 @@ export default function DatabaseProvider({ children }: DatabaseProviderProps) {
           <p className="text-muted-foreground">{error}</p>
           <button 
             className="bg-primary text-primary-foreground px-4 py-2 rounded-md"
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              localStorage.removeItem('dbInitialized');
+              window.location.reload();
+            }}
           >
             Retry
           </button>
         </div>
-        <Toaster />
       </div>
     );
   }
 
   // If initialized and no error, render children
-  return (
-    <>
-      {children}
-      <Toaster />
-    </>
-  );
+  return <>{children}</>;
 } 

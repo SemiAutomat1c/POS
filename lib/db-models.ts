@@ -39,6 +39,23 @@ export const getProducts = async (): Promise<Product[]> => {
   });
 };
 
+export const getProductById = async (id: number): Promise<Product | null> => {
+  const db = await initializeDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['products'], 'readonly');
+    const store = transaction.objectStore('products');
+    const request = store.get(id);
+
+    request.onsuccess = () => {
+      resolve(request.result || null);
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
+  });
+};
+
 export const addProduct = async (product: Omit<Product, 'id'>): Promise<number> => {
   console.log("DB: Adding product:", product);
   

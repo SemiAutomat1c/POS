@@ -1,160 +1,187 @@
 "use client"
 
-import { useState } from "react"
-import { formatCurrency } from "@/lib/utils"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { useEffect, useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Package, ShoppingCart, Users, RefreshCw, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Plus, Package, ShoppingCart, Tag, Truck, BarChart } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useToast } from "@/components/ui/use-toast"
+import { motion } from 'framer-motion'
 import { useRouter } from "next/navigation"
-import AddProductWithVariantsDialog from "@/components/add-product-with-variants-dialog"
-import { ProductWithVariants } from "@/lib/models/Product"
+import { getProducts, getCustomers, getSales, getReturns } from '@/lib/db-adapter'
+
+interface DashboardStats {
+  totalSales: number;
+  totalProducts: number;
+  totalCustomers: number;
+  totalReturns: number;
+}
+
+interface StatCardProps {
+  title: string;
+  value: number;
+  icon: React.ElementType;
+  description: string;
+}
+
+function StatCard({ title, value, icon: Icon, description }: StatCardProps) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function DashboardPage() {
-  const router = useRouter();
-  // Mock data - replace with actual data from your backend later
-  const totalSales = 15000
-  const salesIncrease = 2500
-  const totalRevenue = 25000
-  const revenueIncrease = 4000
-  const totalExpenses = 8000
-  const expensesIncrease = 1000
-  const lowStockItems = 5
-  const outOfStockItems = 2
+  const [isLoading, setIsLoading] = useState(true)
+  const [stats, setStats] = useState<DashboardStats>({
+    totalSales: 0,
+    totalProducts: 0,
+    totalCustomers: 0,
+    totalReturns: 0
+  })
+  const router = useRouter()
+  const { toast } = useToast()
 
-  // State for add product dialog
-  const [showAddProductDialog, setShowAddProductDialog] = useState(false);
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        const [products, customers, sales, returns] = await Promise.all([
+          getProducts(),
+          getCustomers(),
+          getSales(),
+          getReturns()
+        ])
 
-  // Handler for adding a product (this is just a placeholder as we'll navigate to inventory)
-  const handleAddProduct = (product: ProductWithVariants) => {
-    // This would typically add the product and then refresh data
-    setShowAddProductDialog(false);
-    // Navigate to inventory after adding
-    router.push("/inventory");
-  };
+        setStats({
+          totalProducts: products.length,
+          totalCustomers: customers.length,
+          totalSales: sales.length,
+          totalReturns: returns.length
+        })
+      } catch (error) {
+        console.error('Error loading dashboard stats:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard statistics",
+          variant: "destructive"
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadStats()
+  }, [toast])
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Dashboard</h1>
-      
-      {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalSales)}</div>
-            <p className="text-xs text-muted-foreground">+{formatCurrency(salesIncrease)} from last month</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">+{formatCurrency(revenueIncrease)} from last month</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Expenses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalExpenses)}</div>
-            <p className="text-xs text-muted-foreground">+{formatCurrency(expensesIncrease)} from last month</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Inventory Alerts</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{lowStockItems}</div>
-            <p className="text-xs text-muted-foreground">{outOfStockItems} items out of stock</p>
-          </CardContent>
-        </Card>
+    <div className="flex flex-col gap-8 p-8">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
       </div>
 
-      {/* Quick Actions Section */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Quick Actions</h2>
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card className="hover:bg-accent/10 cursor-pointer transition-colors">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Add Product</CardTitle>
-              <CardDescription>Add a new product to inventory</CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center pb-2">
-              <Package className="h-10 w-10 text-primary/60" />
-            </CardContent>
-            <CardFooter>
-              <Button className="w-full" onClick={() => setShowAddProductDialog(true)}>
-                <Plus className="mr-2 h-4 w-4" /> Add Product
-              </Button>
-            </CardFooter>
-          </Card>
+      {/* Stats Section */}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <StatCard
+            title="Total Products"
+            value={stats.totalProducts}
+            icon={Package}
+            description="Products in inventory"
+          />
+        </motion.div>
 
-          <Card className="hover:bg-accent/10 cursor-pointer transition-colors">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Product with Variants</CardTitle>
-              <CardDescription>Manage product variations</CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center pb-2">
-              <Tag className="h-10 w-10 text-primary/60" />
-            </CardContent>
-            <CardFooter>
-              <Button className="w-full" variant="outline" onClick={() => {
-                setShowAddProductDialog(true);
-              }}>
-                <Plus className="mr-2 h-4 w-4" /> Create Variants
-              </Button>
-            </CardFooter>
-          </Card>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <StatCard
+            title="Total Customers"
+            value={stats.totalCustomers}
+            icon={Users}
+            description="Registered customers"
+          />
+        </motion.div>
 
-          <Card className="hover:bg-accent/10 cursor-pointer transition-colors">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">New Sale</CardTitle>
-              <CardDescription>Start a new point of sale transaction</CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center pb-2">
-              <ShoppingCart className="h-10 w-10 text-primary/60" />
-            </CardContent>
-            <CardFooter>
-              <Button className="w-full" variant="outline" onClick={() => router.push("/sales")}>
-                Start Sale
-              </Button>
-            </CardFooter>
-          </Card>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <StatCard
+            title="Total Sales"
+            value={stats.totalSales}
+            icon={ShoppingCart}
+            description="Completed sales"
+          />
+        </motion.div>
 
-          <Card className="hover:bg-accent/10 cursor-pointer transition-colors">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Inventory Management</CardTitle>
-              <CardDescription>Check and update stock levels</CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center pb-2">
-              <Truck className="h-10 w-10 text-primary/60" />
-            </CardContent>
-            <CardFooter>
-              <Button className="w-full" variant="outline" onClick={() => router.push("/inventory")}>
-                Manage Inventory
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-      </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
+          <StatCard
+            title="Total Returns"
+            value={stats.totalReturns}
+            icon={RefreshCw}
+            description="Processed returns"
+          />
+        </motion.div>
+      </section>
 
-      {/* Add products dialog */}
-      {showAddProductDialog && (
-        <AddProductWithVariantsDialog
-          open={showAddProductDialog}
-          onClose={() => setShowAddProductDialog(false)}
-          onAdd={handleAddProduct}
-        />
-      )}
+      {/* Quick Actions */}
+      <section>
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <Button
+              variant="outline"
+              className="h-24 flex flex-col items-center justify-center gap-2"
+              onClick={() => router.push('/dashboard/sales/new')}
+            >
+              <ShoppingCart className="h-6 w-6" />
+              New Sale
+            </Button>
+            <Button
+              variant="outline"
+              className="h-24 flex flex-col items-center justify-center gap-2"
+              onClick={() => router.push('/dashboard/inventory/add')}
+            >
+              <Package className="h-6 w-6" />
+              Add Product
+            </Button>
+            <Button
+              variant="outline"
+              className="h-24 flex flex-col items-center justify-center gap-2"
+              onClick={() => router.push('/dashboard/customers/new')}
+            >
+              <Users className="h-6 w-6" />
+              Add Customer
+            </Button>
+            <Button
+              variant="outline"
+              className="h-24 flex flex-col items-center justify-center gap-2"
+              onClick={() => router.push('/dashboard/settings')}
+            >
+              <Settings className="h-6 w-6" />
+              Settings
+            </Button>
+          </div>
+        </Card>
+      </section>
     </div>
   )
 } 
