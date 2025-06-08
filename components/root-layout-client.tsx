@@ -13,15 +13,19 @@ export default function RootLayoutClient({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const isMarketingPage = pathname === '/' || pathname.startsWith('/login') || pathname.startsWith('/register')
+  const isMarketingPage = pathname === '/' || 
+                          pathname.startsWith('/login') || 
+                          pathname.startsWith('/register')
+  
+  const isDemoPage = pathname.startsWith('/dashboard/demo')
 
-  if (isMarketingPage) {
+  if (isMarketingPage || isDemoPage) {
     return children
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+      <div className="flex h-screen overflow-hidden">
+        <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="h-16 flex items-center justify-between px-4 border-b bg-background">
           <SearchBar />
@@ -33,8 +37,8 @@ export default function RootLayoutClient({
           </div>
         </header>
         <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
+            {children}
+          </main>
       </div>
     </div>
   )

@@ -146,9 +146,30 @@ export class DatabaseAdapter {
 
   async getProducts() {
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      // Return empty array instead of throwing for demo/landing pages
+      if (!user) {
+        console.log('No user found for getProducts, returning empty array')
+        return []
+      }
+
+      const { data: userDetails } = await supabase
+        .from('users')
+        .select('store_id')
+        .eq('id', user.id)
+        .single()
+      
+      if (!userDetails?.store_id) throw new Error('No store associated with user')
+
       const { data: products, error } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          category:categories(name)
+        `)
+        .eq('store_id', userDetails.store_id)
+        .order('created_at', { ascending: false })
 
       if (error) throw error
       return products || []
@@ -176,9 +197,34 @@ export class DatabaseAdapter {
 
   async getCustomers() {
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      // Return empty array instead of throwing for demo/landing pages
+      if (!user) {
+        console.log('No user found for getCustomers, returning empty array')
+        return []
+      }
+
+      const { data: userDetails } = await supabase
+        .from('users')
+        .select('store_id')
+        .eq('id', user.id)
+        .single()
+      
+      if (!userDetails?.store_id) throw new Error('No store associated with user')
+
       const { data: customers, error } = await supabase
         .from('customers')
-        .select('*')
+        .select(`
+          *,
+          sales:sales(
+            id,
+            sale_date,
+            total_amount
+          )
+        `)
+        .eq('store_id', userDetails.store_id)
+        .order('created_at', { ascending: false })
 
       if (error) throw error
       return customers || []
@@ -206,9 +252,34 @@ export class DatabaseAdapter {
 
   async getSales() {
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      // Return empty array instead of throwing for demo/landing pages
+      if (!user) {
+        console.log('No user found for getSales, returning empty array')
+        return []
+      }
+
+      const { data: userDetails } = await supabase
+        .from('users')
+        .select('store_id')
+        .eq('id', user.id)
+        .single()
+      
+      if (!userDetails?.store_id) throw new Error('No store associated with user')
+
       const { data: sales, error } = await supabase
         .from('sales')
-        .select('*')
+        .select(`
+          *,
+          customer:customers(
+            id,
+            name,
+            email
+          )
+        `)
+        .eq('store_id', userDetails.store_id)
+        .order('sale_date', { ascending: false })
 
       if (error) throw error
       return sales || []
@@ -220,9 +291,39 @@ export class DatabaseAdapter {
 
   async getReturns() {
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      // Return empty array instead of throwing for demo/landing pages
+      if (!user) {
+        console.log('No user found for getReturns, returning empty array')
+        return []
+      }
+
+      const { data: userDetails } = await supabase
+        .from('users')
+        .select('store_id')
+        .eq('id', user.id)
+        .single()
+      
+      if (!userDetails?.store_id) throw new Error('No store associated with user')
+
       const { data: returns, error } = await supabase
         .from('returns')
-        .select('*')
+        .select(`
+          *,
+          sale:sales(
+            id,
+            sale_date,
+            total_amount
+          ),
+          customer:customers(
+            id,
+            name,
+            email
+          )
+        `)
+        .eq('store_id', userDetails.store_id)
+        .order('return_date', { ascending: false })
 
       if (error) throw error
       return returns || []
