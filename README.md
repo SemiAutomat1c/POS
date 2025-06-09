@@ -1,6 +1,6 @@
 # GadgetTrack POS System
 
-A modern Point of Sale system for gadget retailers with inventory management, customer tracking, and installment payment features.
+A modern Point of Sale system for gadget retailers with inventory management, customer tracking, and installment payment features. Now available as a Progressive Web App (PWA) for installation on any device!
 
 ## Project Structure
 
@@ -10,6 +10,7 @@ This project is built with:
 - IndexedDB for offline data storage
 - Tailwind CSS for styling
 - TypeScript for type safety
+- PWA support for cross-platform installation
 
 ## Key Features
 
@@ -19,9 +20,48 @@ This project is built with:
 - **Payment Tracking**: Handle full payments and installment plans
 - **Offline Capability**: Full functionality without internet using IndexedDB
 - **Responsive Design**: Works on desktop and tablet devices
+- **Cross-Platform Installation**: Install and use as a native app on iOS, Android, and desktop devices
+
+## PWA Capabilities
+
+GadgetTrack is now a full Progressive Web App (PWA) that can be installed on:
+
+- **iOS Devices**: iPhones and iPads via Safari's "Add to Home Screen"
+- **Android Devices**: Phones and tablets through Chrome's installation feature
+- **Desktop Computers**: Windows, macOS, and Linux through Chrome, Edge, or other modern browsers
+
+Key PWA features include:
+- Offline functionality with service worker caching
+- Home screen installation
+- App-like experience without browser chrome
+- Fast loading and performance
+- Automatic updates
+
+## Installation Guide
+
+Our landing page now features a comprehensive installation guide for all platforms:
+
+### iOS Installation
+1. Open Safari and navigate to the app
+2. Tap the Share button
+3. Select "Add to Home Screen"
+
+### Android Installation
+1. Open Chrome and navigate to the app
+2. Tap the menu (three dots)
+3. Select "Install App" or "Add to Home Screen"
+
+### Desktop Installation
+1. Open Chrome or Edge and navigate to the app
+2. Look for the install icon in the address bar
+3. Click "Install" and follow the prompts
 
 ## Recently Completed
 
+- Added full PWA support with offline capabilities
+- Created cross-platform installation guides
+- Implemented service worker for background sync
+- Added manifest.json for app configuration
 - Consolidated project structure (merged from previous versions)
 - Implemented Redux state management integration
 - Connected detailed database models with IndexedDB
@@ -39,7 +79,7 @@ This project is built with:
    npm run dev
    ```
 
-3. Open [http://localhost:3000](http://localhost:3000) in your browser
+3. Open [http://localhost:4444](http://localhost:4444) in your browser
 
 ## Project Organization
 
@@ -50,13 +90,18 @@ This project is built with:
   - `/lib/models`: Database model definitions
 - `/store`: Redux store configuration
   - `/store/slices`: Redux slices for different data entities
+- `/public`: Static assets and PWA files
+  - `/public/manifest.json`: PWA manifest configuration
+  - `/public/icons`: App icons for different platforms
+  - `/public/sw.js`: Service worker for offline functionality
 
 ## Development Roadmap
 
+- Enhance offline sync capabilities
+- Add reporting and analytics features
+- Implement push notifications for important alerts
 - Complete the Redux implementation for all entity types
 - Connect UI components to real data instead of mock data
-- Implement full offline sync capabilities
-- Add reporting and analytics features
 
 ## Features
 
@@ -86,14 +131,22 @@ This project is built with:
   - Dark/Light mode support
   - Smooth animations
 
+- 📱 **Cross-Platform**
+  - Install on iOS devices
+  - Install on Android devices
+  - Install on desktop computers
+  - Offline functionality
+  - Responsive design for all screen sizes
+
 ## Tech Stack
 
 - **Framework:** Next.js 13+ with App Router
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS
 - **UI Components:** shadcn/ui
-- **State Management:** React Hooks
-- **Database:** Local Storage (can be extended to any database)
+- **State Management:** React Hooks and Redux Toolkit
+- **Database:** Local Storage and IndexedDB
+- **PWA:** next-pwa with Workbox
 
 ## Contributing
 
