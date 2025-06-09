@@ -6,7 +6,7 @@ import { cookies } from 'next/headers'
 import { getUserFromSession } from '@/lib/auth/utils'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-05-28.basil',
 })
 
 const checkoutSchema = z.object({
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       line_items: [
         {
           price_data: {
-            currency: 'usd',
+            currency: 'php',
             product_data: {
               name: plan.name,
               description: plan.description,

@@ -121,7 +121,7 @@ export default function SubscribeForm() {
 
       <div className="grid gap-6">
         {plans
-          .filter(plan => plan.id !== 'free')
+          .filter(plan => plan.id !== 'free' && plan.id !== 'enterprise')
           .map(plan => (
             <Card
               key={plan.id}
@@ -142,7 +142,7 @@ export default function SubscribeForm() {
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-semibold">
-                      ${isAnnual ? plan.annualPrice / 12 : plan.monthlyPrice}
+                      ₱{isAnnual ? plan.annualPrice / 12 : plan.monthlyPrice}
                       <span className="text-sm font-normal text-muted-foreground">
                         /mo
                       </span>

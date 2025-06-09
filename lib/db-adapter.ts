@@ -21,7 +21,11 @@ export class DatabaseAdapter {
         .eq('id', id)
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching user:', error)
+        throw error
+      }
+      
       if (!user) return null
 
       // Cache in IndexedDB
@@ -154,24 +158,60 @@ export class DatabaseAdapter {
         return []
       }
 
-      const { data: userDetails } = await supabase
+      const { data: userDetails, error: userError } = await supabase
         .from('users')
-        .select('store_id')
+        .select('*')
         .eq('id', user.id)
         .single()
       
-      if (!userDetails?.store_id) throw new Error('No store associated with user')
+      if (userError) {
+        console.error('Error fetching user details for products:', userError)
+        return []
+      }
 
+      if (!userDetails?.storeId) {
+        console.log('No store associated with user or user details not found')
+        return []
+      }
+
+      // Query using the correct field names from the schema
       const { data: products, error } = await supabase
         .from('products')
         .select(`
-          *,
-          category:categories(name)
+          id,
+          name,
+          description,
+          sku,
+          serialNumber,
+          quantity,
+          price,
+          cost,
+          minStockLevel,
+          categoryId,
+          brand,
+          model,
+          color,
+          storage,
+          condition,
+          storeId,
+          createdAt,
+          updatedAt
         `)
-        .eq('store_id', userDetails.store_id)
-        .order('created_at', { ascending: false })
+        .eq('storeId', userDetails.storeId)
+        .order('createdAt', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error fetching products:', error)
+        throw error
+      }
+      
+      // Debug: Log products data structure
+      if (products && products.length > 0) {
+        console.log('Sample product data structure:', products[0])
+      } else {
+        console.log('No products found')
+      }
+      
       return products || []
     } catch (error) {
       console.error('Error getting products:', error)
@@ -181,17 +221,48 @@ export class DatabaseAdapter {
 
   async addProduct(productData: any) {
     try {
+      // Make sure storeId is used instead of store_id
+      if (productData.store_id && !productData.storeId) {
+        productData.storeId = productData.store_id;
+        delete productData.store_id;
+      }
+      
+      // Ensure field names match the schema
+      const normalizedData = {
+        name: productData.name,
+        description: productData.description || null,
+        sku: productData.sku || null,
+        serialNumber: productData.serialNumber || productData.serial_number || null,
+        quantity: productData.quantity,
+        price: productData.price,
+        cost: productData.cost,
+        minStockLevel: productData.minStockLevel || productData.min_stock_level || 0,
+        categoryId: productData.categoryId || productData.category_id || null,
+        brand: productData.brand || null,
+        model: productData.model || null,
+        color: productData.color || null,
+        storage: productData.storage || null,
+        condition: productData.condition || 'new',
+        storeId: productData.storeId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
       const { data: product, error } = await supabase
         .from('products')
-        .insert([productData])
+        .insert([normalizedData])
         .select()
-        .single()
+        .single();
 
-      if (error) throw error
-      return product
+      if (error) {
+        console.error('Error inserting product:', error);
+        throw error;
+      }
+      
+      return product;
     } catch (error) {
-      console.error('Error adding product:', error)
-      return null
+      console.error('Error adding product:', error);
+      return null;
     }
   }
 
@@ -205,28 +276,57 @@ export class DatabaseAdapter {
         return []
       }
 
-      const { data: userDetails } = await supabase
+      // Debug: Log the user information to help diagnose the issue
+      console.log('Current user:', user?.id, user?.email)
+
+      const { data: userDetails, error: userError } = await supabase
         .from('users')
-        .select('store_id')
+        .select('*')
         .eq('id', user.id)
         .single()
       
-      if (!userDetails?.store_id) throw new Error('No store associated with user')
+      if (userError) {
+        console.error('Error fetching user details:', userError)
+        return []
+      }
 
+      if (!userDetails?.storeId) {
+        console.log('No store associated with user or user details not found')
+        return []
+      }
+
+      console.log('User store ID:', userDetails.storeId)
+      
+      // Query using the correct field names from the schema
       const { data: customers, error } = await supabase
         .from('customers')
         .select(`
-          *,
-          sales:sales(
-            id,
-            sale_date,
-            total_amount
-          )
+          id,
+          name,
+          email,
+          phone,
+          address,
+          totalPurchases,
+          lastPurchaseDate,
+          createdAt,
+          updatedAt,
+          storeId
         `)
-        .eq('store_id', userDetails.store_id)
-        .order('created_at', { ascending: false })
+        .eq('storeId', userDetails.storeId)
+        .order('createdAt', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error fetching customers:', error)
+        throw error
+      }
+      
+      // Debug: Log customer data structure
+      if (customers && customers.length > 0) {
+        console.log('Sample customer data structure:', customers[0])
+      } else {
+        console.log('No customers found')
+      }
+      
       return customers || []
     } catch (error) {
       console.error('Error getting customers:', error)
@@ -236,17 +336,40 @@ export class DatabaseAdapter {
 
   async addCustomer(customerData: any) {
     try {
+      // Make sure storeId is used instead of store_id
+      if (customerData.store_id && !customerData.storeId) {
+        customerData.storeId = customerData.store_id;
+        delete customerData.store_id;
+      }
+      
+      // Ensure field names match the schema
+      const normalizedData = {
+        name: customerData.name,
+        email: customerData.email || null,
+        phone: customerData.phone || null,
+        address: customerData.address || null,
+        storeId: customerData.storeId,
+        totalPurchases: customerData.totalPurchases || 0,
+        lastPurchaseDate: customerData.lastPurchaseDate || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
       const { data: customer, error } = await supabase
         .from('customers')
-        .insert([customerData])
+        .insert([normalizedData])
         .select()
-        .single()
+        .single();
 
-      if (error) throw error
-      return customer
+      if (error) {
+        console.error('Error inserting customer:', error);
+        throw error;
+      }
+      
+      return customer;
     } catch (error) {
-      console.error('Error adding customer:', error)
-      return null
+      console.error('Error adding customer:', error);
+      return null;
     }
   }
 
@@ -260,28 +383,55 @@ export class DatabaseAdapter {
         return []
       }
 
-      const { data: userDetails } = await supabase
+      const { data: userDetails, error: userError } = await supabase
         .from('users')
-        .select('store_id')
+        .select('*')
         .eq('id', user.id)
         .single()
       
-      if (!userDetails?.store_id) throw new Error('No store associated with user')
+      if (userError) {
+        console.error('Error fetching user details for sales:', userError)
+        return []
+      }
 
+      if (!userDetails?.storeId) {
+        console.log('No store associated with user or user details not found')
+        return []
+      }
+
+      // Query using the correct field names from the schema
       const { data: sales, error } = await supabase
         .from('sales')
         .select(`
-          *,
-          customer:customers(
-            id,
-            name,
-            email
-          )
+          id,
+          customerId,
+          storeId,
+          userId,
+          total,
+          subtotal,
+          tax,
+          discount,
+          paymentMethod,
+          status,
+          notes,
+          createdAt,
+          updatedAt
         `)
-        .eq('store_id', userDetails.store_id)
-        .order('sale_date', { ascending: false })
+        .eq('storeId', userDetails.storeId)
+        .order('createdAt', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error fetching sales:', error)
+        throw error
+      }
+      
+      // Debug: Log sales data structure
+      if (sales && sales.length > 0) {
+        console.log('Sample sales data structure:', sales[0])
+      } else {
+        console.log('No sales found')
+      }
+      
       return sales || []
     } catch (error) {
       console.error('Error getting sales:', error)
@@ -299,33 +449,53 @@ export class DatabaseAdapter {
         return []
       }
 
-      const { data: userDetails } = await supabase
+      const { data: userDetails, error: userError } = await supabase
         .from('users')
-        .select('store_id')
+        .select('*')
         .eq('id', user.id)
         .single()
       
-      if (!userDetails?.store_id) throw new Error('No store associated with user')
+      if (userError) {
+        console.error('Error fetching user details for returns:', userError)
+        return []
+      }
 
+      if (!userDetails?.storeId) {
+        console.log('No store associated with user or user details not found')
+        return []
+      }
+
+      // Query using the correct field names from the schema
       const { data: returns, error } = await supabase
         .from('returns')
         .select(`
-          *,
-          sale:sales(
-            id,
-            sale_date,
-            total_amount
-          ),
-          customer:customers(
-            id,
-            name,
-            email
-          )
+          id,
+          saleId,
+          customerId,
+          storeId,
+          userId,
+          total,
+          reason,
+          status,
+          notes,
+          createdAt,
+          updatedAt
         `)
-        .eq('store_id', userDetails.store_id)
-        .order('return_date', { ascending: false })
+        .eq('storeId', userDetails.storeId)
+        .order('createdAt', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error fetching returns:', error)
+        throw error
+      }
+      
+      // Debug: Log returns data structure
+      if (returns && returns.length > 0) {
+        console.log('Sample returns data structure:', returns[0])
+      } else {
+        console.log('No returns found')
+      }
+      
       return returns || []
     } catch (error) {
       console.error('Error getting returns:', error)
@@ -333,23 +503,42 @@ export class DatabaseAdapter {
     }
   }
 
-  async addStore(storeData: Tables['stores']['Insert']): Promise<Store | null> {
+  async addStore(storeData: any): Promise<Store | null> {
     try {
+      // Normalize field names to match schema
+      const normalizedData = {
+        name: storeData.name,
+        address: storeData.address || '',
+        phone: storeData.phone || '',
+        email: storeData.email || '',
+        ownerId: storeData.ownerId || storeData.owner_id,
+        subscriptionStatus: storeData.subscriptionStatus || 'trial',
+        maxUsers: storeData.maxUsers || 2,
+        maxProducts: storeData.maxProducts || 50,
+        maxLocations: storeData.maxLocations || 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
       const { data: store, error } = await supabase
         .from('stores')
-        .insert([storeData])
+        .insert([normalizedData])
         .select()
-        .single()
+        .single();
 
-      if (error) throw error
-      if (!store) return null
+      if (error) {
+        console.error('Error inserting store:', error);
+        throw error;
+      }
+
+      if (!store) return null;
 
       // Cache in IndexedDB
-      await localDB.saveStore(store)
-      return store
+      await localDB.saveStore(store);
+      return store;
     } catch (error) {
-      console.error('Error adding store:', error)
-      return null
+      console.error('Error adding store:', error);
+      return null;
     }
   }
 

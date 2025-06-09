@@ -1,182 +1,254 @@
 'use client';
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
-import { z } from 'zod'
-import { Button } from '@/components/ui/button'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { emailSchema, passwordSchema } from '@/lib/auth/utils'
-
-const formSchema = z.object({
-  email: emailSchema,
-  password: passwordSchema,
-})
-
-type FormData = z.infer<typeof formSchema>
+import { useState, Suspense, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { supabase } from '@/lib/storage/supabase';
+import { ArrowRight, User, Mail, Lock, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { motion } from 'framer-motion';
+import { navigateToDashboard } from '@/lib/navigation';
+import { AuthLoading } from '@/components/ui/loading';
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [error, setError] = useState<string>('')
-  const [isLoading, setIsLoading] = useState(false)
+  return (
+    <Suspense fallback={<AuthLoading />}>
+      <LoginContent />
+    </Suspense>
+  );
+}
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  })
+function LoginContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  const [formValues, setFormValues] = useState({
+    username: '',
+    password: ''
+  });
+  const justRegistered = searchParams.get('registered') === 'true';
+  const redirectPath = searchParams.get('redirect') || '/dashboard';
 
-  async function onSubmit(data: FormData) {
+  // Check if already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        console.log('Login page: Checking for existing session...');
+        
+        // Clear any redirect loop prevention cookie
+        if (document.cookie.includes('redirect_loop_prevention')) {
+          document.cookie = "redirect_loop_prevention=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+          console.log('Login page: Cleared redirect loop prevention cookie');
+        }
+        
+        // Clear auth redirect cookie
+        if (document.cookie.includes('auth_redirect')) {
+          document.cookie = "auth_redirect=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+          console.log('Login page: Cleared auth redirect cookie');
+        }
+        
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Login page: Error checking session:', error);
+          setInitialLoading(false);
+          return;
+        }
+        
+        if (data.session) {
+          console.log('Login page: User is already logged in, redirecting to dashboard');
+          // Set cookie to prevent flicker
+          document.cookie = "redirect_loop_prevention=true; path=/; max-age=60";
+          window.location.href = redirectPath;
+          return;
+        }
+        
+        setInitialLoading(false);
+      } catch (err) {
+        console.error('Login page: Error checking session:', err);
+        setInitialLoading(false);
+      }
+    };
+    
+    checkSession();
+  }, [redirectPath]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
     try {
-      setIsLoading(true)
-      setError('')
+      // First, get email from username
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('email')
+        .eq('username', formValues.username)
+        .single();
+      
+      if (userError || !userData) {
+        console.error('Error finding user:', userError);
+        setError('Username not found. Please check your credentials.');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('Found user email:', userData.email);
+      
+      // Try Supabase login with email
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: userData.email,
+        password: formValues.password,
+      });
 
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Failed to login')
+      if (error) {
+        console.error('Login error:', error);
+        setError('Invalid username or password. Please try again.');
+        setLoading(false);
+        return;
       }
 
-      // Redirect to dashboard on success
-      router.push('/dashboard')
+      console.log('Login successful:', data);
+      setLoginSuccess(true);
+      
+      // Set cookie to prevent flicker
+      document.cookie = "redirect_loop_prevention=true; path=/; max-age=60";
+      
+      // Redirect to dashboard or the original requested URL
+      window.location.href = redirectPath;
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-    } finally {
-      setIsLoading(false)
+      console.error('Unexpected error during login:', err);
+      setError('An unexpected error occurred. Please try again.');
+      setLoading(false);
     }
+  };
+
+  // Use effect to handle successful login
+  useEffect(() => {
+    if (loginSuccess) {
+      // Add a delay before redirecting to ensure Supabase session is properly set
+      const redirectTimer = setTimeout(() => {
+        console.log(`Redirecting to ${redirectPath}...`);
+        window.location.href = redirectPath;
+      }, 1000);
+      
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [loginSuccess, redirectPath]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormValues(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Show loading state while checking initial session
+  if (initialLoading) {
+    return <AuthLoading />;
   }
 
   return (
-    <div className="container relative flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-      <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
-        <div className="absolute inset-0 bg-zinc-900" />
-        <div className="relative z-20 flex items-center text-lg font-medium">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="mr-2 h-6 w-6"
-          >
-            <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
-          </svg>
-          GadgetTrack
-        </div>
-        <div className="relative z-20 mt-auto">
-          <blockquote className="space-y-2">
-            <p className="text-lg">
-              &ldquo;GadgetTrack has completely transformed how we manage our inventory. It's intuitive, powerful, and saves us hours every week.&rdquo;
-            </p>
-            <footer className="text-sm">Sofia Davis - Store Owner</footer>
-          </blockquote>
-        </div>
-      </div>
-      <div className="lg:p-8">
-        <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-          <div className="flex flex-col space-y-2 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Welcome back
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Enter your email to sign in to your account
-            </p>
-          </div>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="name@example.com"
-                        type="email"
-                        autoCapitalize="none"
-                        autoComplete="email"
-                        autoCorrect="off"
-                        disabled={isLoading}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <motion.div 
+        className="w-full max-w-md"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Card className="shadow-lg">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold text-center">Login</CardTitle>
+            {justRegistered && (
+              <div className="flex items-center justify-center gap-2 text-green-600 bg-green-50 p-2 rounded-md">
+                <CheckCircle className="h-4 w-4" />
+                <span className="text-sm">Registration successful! Please login.</span>
+              </div>
+            )}
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="username"
+                    name="username"
+                    placeholder="your username"
+                    type="text"
+                    autoComplete="username"
+                    required
+                    className="pl-10"
+                    value={formValues.username}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    name="password"
+                    placeholder="••••••••"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    className="pl-10"
+                    value={formValues.password}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+              {error && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
+                  {error}
+                </div>
+              )}
+              <Button 
+                type="submit" 
+                className="w-full flex items-center justify-center gap-2"
+                disabled={loading || loginSuccess}
+              >
+                {loading || loginSuccess ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                    {loginSuccess ? 'Redirecting...' : 'Logging in...'}
+                  </>
+                ) : (
+                  <>
+                    Login
+                    <ArrowRight className="h-4 w-4" />
+                  </>
                 )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter your password"
-                        type="password"
-                        autoComplete="current-password"
-                        disabled={isLoading}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
-          </Form>
-
-          <div className="flex flex-col space-y-2 text-center text-sm">
-            <Link
-              href="/forgot-password"
-              className="text-muted-foreground hover:text-primary underline underline-offset-4"
-            >
-              Forgot your password?
-            </Link>
-            <p className="text-muted-foreground">
+          </CardContent>
+          <CardFooter>
+            <div className="text-center text-sm w-full">
               Don't have an account?{' '}
-              <Link
-                href="/register"
-                className="hover:text-primary underline underline-offset-4"
-              >
+              <Link href="/register" className="text-primary hover:underline">
                 Sign up
               </Link>
-            </p>
-          </div>
-        </div>
-      </div>
+            </div>
+          </CardFooter>
+        </Card>
+      </motion.div>
     </div>
-  )
+  );
 } 

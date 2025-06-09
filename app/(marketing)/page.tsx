@@ -97,7 +97,7 @@ export default function LandingPage() {
               </Button>
               <Button asChild variant="outline" size="lg">
                 <Link href="/dashboard/demo">View Demo</Link>
-              </Button>
+            </Button>
             </div>
           </div>
           
@@ -131,7 +131,7 @@ export default function LandingPage() {
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? 'Logging in...' : 'Login'}
-                </Button>
+            </Button>
               </form>
             </CardContent>
           </Card>
@@ -177,8 +177,14 @@ export default function LandingPage() {
                     )}
                   </CardTitle>
                   <div className="mt-4">
-                    <span className="text-3xl font-bold">${plan.monthlyPrice}</span>
-                    <span className="text-muted-foreground">/month</span>
+                    {plan.id === 'enterprise' ? (
+                      <span className="text-3xl font-bold">Coming soon!</span>
+                    ) : (
+                      <>
+                        <span className="text-3xl font-bold">₱{plan.monthlyPrice}</span>
+                        <span className="text-muted-foreground">/month</span>
+                      </>
+                    )}
                   </div>
                   <p className="text-sm text-muted-foreground mt-2">
                     {plan.description}
@@ -213,14 +219,19 @@ export default function LandingPage() {
                   <Button
                     className="w-full"
                     variant={plan.recommended ? "default" : "outline"}
-                    asChild
+                    asChild={plan.id !== 'enterprise'}
+                    disabled={plan.id === 'enterprise'}
                   >
+                    {plan.id === 'enterprise' ? (
+                      <div>Coming Soon</div>
+                    ) : (
                     <Link href={`/register?plan=${plan.id}`}>
                       {plan.id === 'free' ? 'Get Started' : 'Start Free Trial'}
                     </Link>
+                    )}
                   </Button>
                 </div>
-              </Card>
+                </Card>
             ))}
           </div>
         </div>

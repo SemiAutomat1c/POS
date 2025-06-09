@@ -1,7 +1,25 @@
 "use client"
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, Package, ShoppingCart, Users, CheckCircle2, RefreshCw } from 'lucide-react'
+import { 
+  ArrowRight, 
+  Package, 
+  ShoppingCart, 
+  Users, 
+  CheckCircle2, 
+  RefreshCw, 
+  Smartphone, 
+  Laptop, 
+  Download, 
+  Apple, 
+  Chrome, 
+  Globe,
+  Plus,
+  PlusSquare,
+  Share,
+  MoreVertical,
+  ArrowDownToLine
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from "next/link"
@@ -12,6 +30,31 @@ import { useEffect, useState } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { getProducts, getCustomers, getSales, getReturns } from '@/lib/db-adapter'
 import { demoStats } from '@/lib/demo-data'
+import { supabase } from '@/lib/storage/supabase'
+import { AuthLoading } from '@/components/ui/loading'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+// Safari icon component since it's not included in lucide-react
+const Safari = (props: any) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <circle cx="12" cy="12" r="10" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <line x1="12" y1="2" x2="12" y2="22" />
+    <polyline points="16.25 7.75 12 12 7.75 16.25" />
+    <line x1="7.75" y1="7.75" x2="16.25" y2="16.25" />
+  </svg>
+);
 
 interface StatCardProps {
   title: string;
@@ -47,6 +90,7 @@ function StatCard({ title, value, icon: Icon, description }: StatCardProps) {
 export default function LandingPage() {
   const [isMounted, setIsMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [initialAuthChecking, setInitialAuthChecking] = useState(true)
   const [stats, setStats] = useState<{
     totalProducts: number | null,
     totalCustomers: number | null,
@@ -60,10 +104,50 @@ export default function LandingPage() {
   })
   const { toast } = useToast()
 
+  // Check if already logged in
   useEffect(() => {
-    setIsMounted(true)
-    loadStats()
-  }, [])
+    const checkSession = async () => {
+      try {
+        console.log('Landing page: Checking for existing session...');
+        
+        // Clear any redirect loop prevention cookie
+        if (document.cookie.includes('redirect_loop_prevention')) {
+          document.cookie = "redirect_loop_prevention=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+          console.log('Landing page: Cleared redirect loop prevention cookie');
+        }
+        
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Landing page: Error checking session:', error);
+          setInitialAuthChecking(false);
+          return;
+        }
+        
+        if (data.session) {
+          console.log('Landing page: User is already logged in, redirecting to dashboard');
+          // Set cookie to prevent flicker
+          document.cookie = "redirect_loop_prevention=true; path=/; max-age=60";
+          window.location.href = '/dashboard';
+          return;
+        }
+        
+        setInitialAuthChecking(false);
+      } catch (err) {
+        console.error('Landing page: Error checking session:', err);
+        setInitialAuthChecking(false);
+      }
+    };
+    
+    checkSession();
+  }, []);
+
+  useEffect(() => {
+    if (!initialAuthChecking) {
+      setIsMounted(true)
+      loadStats()
+    }
+  }, [initialAuthChecking])
 
   const loadStats = async () => {
     try {
@@ -71,12 +155,12 @@ export default function LandingPage() {
       
       try {
         // Try to get real data first
-        const [products, customers, sales, returns] = await Promise.allSettled([
-          getProducts(),
-          getCustomers(),
-          getSales(),
-          getReturns()
-        ])
+      const [products, customers, sales, returns] = await Promise.allSettled([
+        getProducts(),
+        getCustomers(),
+        getSales(),
+        getReturns()
+      ])
 
         // Check if we got actual data
         if (products.status === 'fulfilled' && 
@@ -136,6 +220,11 @@ export default function LandingPage() {
     },
   ]
 
+  // Show loading state while checking auth
+  if (initialAuthChecking) {
+    return <AuthLoading />;
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
@@ -170,9 +259,25 @@ export default function LandingPage() {
                   layout
                 >
                   <Button asChild size="lg" className="gap-2">
-                    <Link href="/register">
+                    <Link href="#pricing" onClick={(e) => {
+                      e.preventDefault();
+                      document.querySelector('#pricing')?.scrollIntoView({ 
+                        behavior: 'smooth' 
+                      });
+                    }}>
                       Get Started
                       <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="lg" className="gap-2">
+                    <Link href="#installation" onClick={(e) => {
+                      e.preventDefault();
+                      document.querySelector('#installation')?.scrollIntoView({ 
+                        behavior: 'smooth' 
+                      });
+                    }}>
+                      <Smartphone className="h-4 w-4" />
+                      Install on Device
                     </Link>
                   </Button>
                   <Button asChild variant="outline" size="lg">
@@ -238,63 +343,63 @@ export default function LandingPage() {
             Real-time Dashboard Stats
           </motion.h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              <StatCard
-                title="Total Products"
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <StatCard
+            title="Total Products"
                 value={isLoading ? null : stats.totalProducts}
-                icon={Package}
-                description="Products in inventory"
-              />
-            </motion.div>
+            icon={Package}
+            description="Products in inventory"
+          />
+        </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <StatCard
-                title="Total Customers"
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <StatCard
+            title="Total Customers"
                 value={isLoading ? null : stats.totalCustomers}
-                icon={Users}
-                description="Registered customers"
-              />
-            </motion.div>
+            icon={Users}
+            description="Registered customers"
+          />
+        </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-            >
-              <StatCard
-                title="Total Sales"
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <StatCard
+            title="Total Sales"
                 value={isLoading ? null : stats.totalSales}
-                icon={ShoppingCart}
-                description="Completed sales"
-              />
-            </motion.div>
+            icon={ShoppingCart}
+            description="Completed sales"
+          />
+        </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-            >
-              <StatCard
-                title="Total Returns"
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
+          <StatCard
+            title="Total Returns"
                 value={isLoading ? null : stats.totalReturns}
-                icon={RefreshCw}
-                description="Processed returns"
-              />
-            </motion.div>
+            icon={RefreshCw}
+            description="Processed returns"
+          />
+        </motion.div>
           </div>
         </div>
       </section>
 
       {/* Pricing Section */}
-      <section className="py-20">
+      <section id="pricing" className="py-20">
         <div className="container">
           <AnimatePresence>
             {isMounted && (
@@ -336,8 +441,14 @@ export default function LandingPage() {
                             )}
                           </CardTitle>
                           <div className="mt-4">
-                            <span className="text-3xl font-bold">₱{plan.monthlyPrice}</span>
-                            <span className="text-muted-foreground">/month</span>
+                            {plan.id === 'enterprise' ? (
+                              <span className="text-3xl font-bold">Coming soon!</span>
+                            ) : (
+                              <>
+                                <span className="text-3xl font-bold">₱{plan.monthlyPrice}</span>
+                                <span className="text-muted-foreground">/month</span>
+                              </>
+                            )}
                           </div>
                           <p className="text-sm text-muted-foreground mt-2">
                             {plan.description}
@@ -378,9 +489,9 @@ export default function LandingPage() {
                             {plan.id === 'enterprise' ? (
                               <div>Coming Soon</div>
                             ) : (
-                              <Link href={`/register?plan=${plan.id}`}>
-                                {plan.id === 'free' ? 'Get Started' : 'Start Free Trial'}
-                              </Link>
+                            <Link href={`/register?plan=${plan.id}`}>
+                              {plan.id === 'free' ? 'Get Started' : 'Start Free Trial'}
+                            </Link>
                             )}
                           </Button>
                         </div>
@@ -388,6 +499,229 @@ export default function LandingPage() {
                     </motion.div>
                   ))}
                 </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+      </section>
+
+      {/* Installation Guide Section */}
+      <section id="installation" className="py-20 bg-muted/30">
+        <div className="container">
+          <AnimatePresence>
+            {isMounted && (
+              <>
+                <motion.div className="text-center mb-12"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  layout
+                >
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary">
+                    <Download className="h-8 w-8 text-primary-foreground" />
+                  </div>
+                  <motion.h2 
+                    className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-4"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                    layout
+                  >
+                    Install on Any Device
+                  </motion.h2>
+                  <motion.p
+                    className="text-center text-lg text-muted-foreground max-w-3xl mx-auto"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    layout
+                  >
+                    GadgetTrack works everywhere! Install our app on your phone, tablet, or computer for the best experience.
+                  </motion.p>
+                </motion.div>
+
+                <Tabs defaultValue="ios" className="w-full max-w-4xl mx-auto">
+                  <motion.div
+                    className="flex justify-center mb-8"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
+                    <TabsList className="grid grid-cols-3 w-full max-w-md">
+                      <TabsTrigger value="ios" className="flex items-center justify-center gap-2 py-3">
+                        <Apple className="h-5 w-5" />
+                        <span>iOS</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="android" className="flex items-center justify-center gap-2 py-3">
+                        <Smartphone className="h-5 w-5" />
+                        <span>Android</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="desktop" className="flex items-center justify-center gap-2 py-3">
+                        <Laptop className="h-5 w-5" />
+                        <span>Desktop</span>
+                      </TabsTrigger>
+                    </TabsList>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                  >
+                    <TabsContent value="ios" className="mt-0">
+                      <Card className="border-primary/20 shadow-lg">
+                        <CardHeader className="text-center border-b pb-8">
+                          <CardTitle className="flex items-center justify-center gap-2 text-2xl">
+                            <Apple className="h-6 w-6 text-primary" />
+                            Install on iPhone or iPad
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-8">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                            <div className="flex flex-col items-center text-center">
+                              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 shadow-sm">
+                                <span className="text-2xl font-bold text-primary">1</span>
+                              </div>
+                              <h3 className="text-xl font-medium mb-3">Open in Safari</h3>
+                              <div className="rounded-lg bg-muted p-3 mb-4">
+                                <Safari className="h-8 w-8 mx-auto text-primary/70 mb-2" />
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Visit app.gadgettrack.com in Safari browser
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-center text-center">
+                              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 shadow-sm">
+                                <span className="text-2xl font-bold text-primary">2</span>
+                              </div>
+                              <h3 className="text-xl font-medium mb-3">Tap Share Icon</h3>
+                              <div className="rounded-lg bg-muted p-3 mb-4">
+                                <Share className="h-8 w-8 mx-auto text-primary/70 mb-2" />
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Tap the share button at the bottom of the screen
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-center text-center">
+                              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 shadow-sm">
+                                <span className="text-2xl font-bold text-primary">3</span>
+                              </div>
+                              <h3 className="text-xl font-medium mb-3">Add to Home Screen</h3>
+                              <div className="rounded-lg bg-muted p-3 mb-4">
+                                <PlusSquare className="h-8 w-8 mx-auto text-primary/70 mb-2" />
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Scroll down and tap "Add to Home Screen"
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    <TabsContent value="android" className="mt-0">
+                      <Card className="border-primary/20 shadow-lg">
+                        <CardHeader className="text-center border-b pb-8">
+                          <CardTitle className="flex items-center justify-center gap-2 text-2xl">
+                            <Smartphone className="h-6 w-6 text-primary" />
+                            Install on Android Devices
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-8">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                            <div className="flex flex-col items-center text-center">
+                              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 shadow-sm">
+                                <span className="text-2xl font-bold text-primary">1</span>
+                              </div>
+                              <h3 className="text-xl font-medium mb-3">Open in Chrome</h3>
+                              <div className="rounded-lg bg-muted p-3 mb-4">
+                                <Chrome className="h-8 w-8 mx-auto text-primary/70 mb-2" />
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Visit app.gadgettrack.com in Chrome browser
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-center text-center">
+                              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 shadow-sm">
+                                <span className="text-2xl font-bold text-primary">2</span>
+                              </div>
+                              <h3 className="text-xl font-medium mb-3">Tap Menu</h3>
+                              <div className="rounded-lg bg-muted p-3 mb-4">
+                                <MoreVertical className="h-8 w-8 mx-auto text-primary/70 mb-2" />
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Tap the three dots menu in the top right
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-center text-center">
+                              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 shadow-sm">
+                                <span className="text-2xl font-bold text-primary">3</span>
+                              </div>
+                              <h3 className="text-xl font-medium mb-3">Install App</h3>
+                              <div className="rounded-lg bg-muted p-3 mb-4">
+                                <ArrowDownToLine className="h-8 w-8 mx-auto text-primary/70 mb-2" />
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Select "Install App" or "Add to Home Screen"
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    <TabsContent value="desktop" className="mt-0">
+                      <Card className="border-primary/20 shadow-lg">
+                        <CardHeader className="text-center border-b pb-8">
+                          <CardTitle className="flex items-center justify-center gap-2 text-2xl">
+                            <Laptop className="h-6 w-6 text-primary" />
+                            Install on Desktop
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-8">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                            <div className="flex flex-col items-center text-center">
+                              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 shadow-sm">
+                                <span className="text-2xl font-bold text-primary">1</span>
+                              </div>
+                              <h3 className="text-xl font-medium mb-3">Open in Browser</h3>
+                              <div className="rounded-lg bg-muted p-3 mb-4">
+                                <Globe className="h-8 w-8 mx-auto text-primary/70 mb-2" />
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Visit app.gadgettrack.com in Chrome or Edge
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-center text-center">
+                              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 shadow-sm">
+                                <span className="text-2xl font-bold text-primary">2</span>
+                              </div>
+                              <h3 className="text-xl font-medium mb-3">Look for Install Icon</h3>
+                              <div className="rounded-lg bg-muted p-3 mb-4">
+                                <Plus className="h-8 w-8 mx-auto text-primary/70 mb-2" />
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Look for the install icon in the address bar
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-center text-center">
+                              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 shadow-sm">
+                                <span className="text-2xl font-bold text-primary">3</span>
+                              </div>
+                              <h3 className="text-xl font-medium mb-3">Install App</h3>
+                              <div className="rounded-lg bg-muted p-3 mb-4">
+                                <ArrowDownToLine className="h-8 w-8 mx-auto text-primary/70 mb-2" />
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Click "Install" and follow the prompts
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                  </motion.div>
+                </Tabs>
               </>
             )}
           </AnimatePresence>
@@ -408,17 +742,39 @@ export default function LandingPage() {
                 <Card className="p-8 text-center">
                   <h2 className="text-2xl font-bold mb-4">Ready to streamline your business?</h2>
                   <p className="text-muted-foreground mb-8">
-                    Start managing your inventory and sales more efficiently today.
+                    Start managing your inventory and sales more efficiently today. Available on all your devices.
                   </p>
-                  <Button
-                    size="lg"
-                    asChild
-                  >
-                    <Link href="/register">
-                      Get Started Now
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <Button
+                      size="lg"
+                      asChild
+                    >
+                      <Link href="#pricing" onClick={(e) => {
+                        e.preventDefault();
+                        document.querySelector('#pricing')?.scrollIntoView({ 
+                          behavior: 'smooth' 
+                        });
+                      }}>
+                        Get Started Now
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      asChild
+                    >
+                      <Link href="#installation" onClick={(e) => {
+                        e.preventDefault();
+                        document.querySelector('#installation')?.scrollIntoView({ 
+                          behavior: 'smooth' 
+                        });
+                      }}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Install App
+                      </Link>
+                    </Button>
+                  </div>
                 </Card>
               </motion.div>
             )}

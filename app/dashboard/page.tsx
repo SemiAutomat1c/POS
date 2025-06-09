@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Package, ShoppingCart, Users, RefreshCw, Settings, Eye, Calendar, CreditCard } from "lucide-react"
+import { Package, ShoppingCart, Users, RefreshCw, Settings, Eye, Calendar, CreditCard, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/components/ui/use-toast"
@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatDistanceToNow } from 'date-fns'
 import Link from "next/link"
+import { supabase } from "@/lib/storage/supabase"
 
 interface DashboardStats {
   totalSales: number;
