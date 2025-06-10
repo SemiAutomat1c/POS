@@ -398,10 +398,21 @@ function RegisterContent() {
                     <SelectTrigger>
                       <SelectValue placeholder="Select a plan" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[300px] overflow-y-auto">
                       {plans.map((plan) => (
-                        <SelectItem key={plan.id} value={plan.id}>
-                          {plan.name} (${plan.monthlyPrice}/month)
+                        <SelectItem key={plan.id} value={plan.id} className="py-2">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between">
+                              <span className="font-medium">{plan.name}</span> 
+                              <span>{plan.id === 'free' || plan.id === 'enterprise' ? 'Free' : `₱${plan.monthlyPrice}/month`}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{plan.description}</p>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              <span>Up to {plan.limits.products} products • </span>
+                              <span>{plan.limits.users} users • </span>
+                              <span>{plan.limits.locations} location{plan.limits.locations > 1 ? 's' : ''}</span>
+                            </div>
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>

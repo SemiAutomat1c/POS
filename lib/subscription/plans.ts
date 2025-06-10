@@ -23,7 +23,7 @@ export const plans: Plan[] = [
   {
     id: 'free',
     name: 'Starter',
-    description: 'Basic features for small businesses',
+    description: 'Perfect for small stores just getting started with inventory management',
     monthlyPrice: 0,
     annualPrice: 0,
     features: [
@@ -45,7 +45,7 @@ export const plans: Plan[] = [
   {
     id: 'basic',
     name: 'Basic',
-    description: 'Essential features for growing businesses',
+    description: 'Great for growing businesses with multiple staff members',
     monthlyPrice: 249,
     annualPrice: 2490,
     features: [
@@ -67,7 +67,7 @@ export const plans: Plan[] = [
   {
     id: 'premium',
     name: 'Premium',
-    description: 'Advanced features for established businesses',
+    description: 'Ideal for established businesses needing advanced features and reporting',
     monthlyPrice: 499,
     annualPrice: 4990,
     features: [
@@ -90,7 +90,7 @@ export const plans: Plan[] = [
   {
     id: 'enterprise',
     name: 'Enterprise',
-    description: 'Coming soon! Contact us for early access.',
+    description: 'Coming soon! Contact us for early access to our enterprise solution',
     monthlyPrice: 0,
     annualPrice: 0,
     features: [
