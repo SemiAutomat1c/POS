@@ -79,14 +79,17 @@ function RegisterContent() {
   
   // Set mounted state to true when component mounts
   useEffect(() => {
+    setMounted(true);
+    
     // Update plan from URL param after mounting
-    if (mounted && planParam && ['free', 'basic', 'premium', 'enterprise'].includes(planParam)) {
+    if (planParam && ['free', 'basic', 'premium', 'enterprise'].includes(planParam)) {
+      console.log('Setting plan from URL parameter:', planParam);
       setFormValues(prev => ({
         ...prev,
         plan: planParam
       }));
     }
-  }, [planParam, mounted]);
+  }, [planParam]);
   
   // Auto-redirect to login after successful registration
   useEffect(() => {
@@ -400,7 +403,12 @@ function RegisterContent() {
                     </SelectTrigger>
                     <SelectContent className="max-h-[300px] overflow-y-auto">
                       {plans.map((plan) => (
-                        <SelectItem key={plan.id} value={plan.id} className="py-2">
+                        <SelectItem 
+                          key={plan.id} 
+                          value={plan.id} 
+                          className="py-2"
+                          disabled={plan.id === 'enterprise'}
+                        >
                           <div className="flex flex-col gap-1">
                             <div className="flex justify-between">
                               <span className="font-medium">{plan.name}</span> 
