@@ -7,6 +7,7 @@ import SubscriptionManagement from '@/components/subscription/SubscriptionManage
 import { AuthLoading } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/providers/AuthProvider';
+import { clearAllCookies } from '@/lib/utils';
 
 export default function DashboardSubscriptionPage() {
   const router = useRouter();
@@ -14,15 +15,30 @@ export default function DashboardSubscriptionPage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshAuth } = useAuth();
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<any>(null);
   const [subscriptionData, setSubscriptionData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [authTimeoutExpired, setAuthTimeoutExpired] = useState(false);
+
+  // Set a timeout to prevent endless loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setAuthTimeoutExpired(true);
+      // Try to refresh auth if we're still loading
+      if (authLoading) {
+        refreshAuth();
+      }
+    }, 5000); // 5 seconds timeout
+    
+    return () => clearTimeout(timeout);
+  }, [authLoading, refreshAuth]);
 
   useEffect(() => {
-    // Set cookie to prevent redirect loops
-    document.cookie = "redirect_loop_prevention=true; path=/; max-age=60";
+    // Set cookie to prevent redirect loops 
+    // Make it last longer and use a more specific name
+    document.cookie = "subscription_redirect_prevention=true; path=/; max-age=300";
     
     async function fetchData() {
       if (authLoading) return; // Wait for auth to complete
@@ -70,8 +86,35 @@ export default function DashboardSubscriptionPage() {
       }
     }
 
-    fetchData();
+    if (!authLoading) {
+      fetchData();
+    }
   }, [user, authLoading, supabase]);
+
+  // If auth is still loading but timeout expired, give option to reset
+  if ((authLoading || loading) && authTimeoutExpired) {
+    return (
+      <div className="container mx-auto p-4 text-center">
+        <h2 className="text-xl font-bold mb-4">Authentication is taking longer than expected</h2>
+        <p className="mb-4">This could be due to network issues or an authentication problem.</p>
+        <div className="flex flex-col gap-4 items-center justify-center">
+          <Button onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => {
+              // Clear all cookies and go to login
+              clearAllCookies();
+              router.push('/login');
+            }}
+          >
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Show loading state while checking authentication
   if (authLoading || loading) {
@@ -88,8 +131,8 @@ export default function DashboardSubscriptionPage() {
           <Button 
             className="mt-4" 
             onClick={() => {
-              // Clear any redirect prevention cookies before redirecting
-              document.cookie = "redirect_loop_prevention=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+              // Clear cookies before redirecting
+              clearAllCookies();
               router.push('/login?redirect=/dashboard/subscription');
             }}
           >
