@@ -57,11 +57,13 @@ export async function middleware(req: NextRequest) {
   // Routes that authenticated users should be able to access directly (not redirect to dashboard)
   const authenticatedAccessRoutes = [
     '/subscription',
+    '/dashboard/subscription',
   ];
   
   // Routes that require authentication but shouldn't redirect to dashboard
   const protectedRoutes = [
     '/subscription',
+    '/dashboard/subscription',
   ];
   
   // Check if current path is exact match for a route that should redirect
@@ -199,5 +201,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)','/', '/register', '/login', '/subscription', '/dashboard/demo', '/demo'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)','/', '/register', '/login', '/subscription', '/dashboard/subscription', '/dashboard/demo', '/demo'],
 }; 
