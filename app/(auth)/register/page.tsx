@@ -398,27 +398,32 @@ function RegisterContent() {
                     value={formValues.plan}
                     onValueChange={(value) => setFormValues(prev => ({ ...prev, plan: value }))}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select a plan" />
                     </SelectTrigger>
-                    <SelectContent className="max-h-[300px] overflow-y-auto">
+                    <SelectContent 
+                      position="popper" 
+                      sideOffset={5} 
+                      className="max-h-[300px] w-full overflow-y-auto z-50"
+                      align="center"
+                    >
                       {plans.map((plan) => (
                         <SelectItem 
                           key={plan.id} 
                           value={plan.id} 
-                          className="py-2"
+                          className="py-2 focus:bg-accent focus:text-accent-foreground"
                           disabled={plan.id === 'enterprise'}
                         >
-                          <div className="flex flex-col gap-1">
-                            <div className="flex justify-between">
+                          <div className="flex flex-col gap-1 w-full overflow-hidden">
+                            <div className="flex justify-between w-full">
                               <span className="font-medium">{plan.name}</span> 
-                              <span>{plan.id === 'free' || plan.id === 'enterprise' ? 'Free' : `₱${plan.monthlyPrice}/month`}</span>
+                              <span className="ml-2 whitespace-nowrap">{plan.id === 'free' || plan.id === 'enterprise' ? 'Free' : `₱${plan.monthlyPrice}/month`}</span>
                             </div>
-                            <p className="text-xs text-muted-foreground">{plan.description}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-2">{plan.description}</p>
                             <div className="text-xs text-muted-foreground mt-1">
-                              <span>Up to {plan.limits.products} products • </span>
-                              <span>{plan.limits.users} users • </span>
-                              <span>{plan.limits.locations} location{plan.limits.locations > 1 ? 's' : ''}</span>
+                              <span className="inline-block">Up to {plan.limits.products} products</span> • 
+                              <span className="inline-block ml-1">{plan.limits.users} users</span> • 
+                              <span className="inline-block ml-1">{plan.limits.locations} location{plan.limits.locations > 1 ? 's' : ''}</span>
                             </div>
                           </div>
                         </SelectItem>
@@ -448,8 +453,14 @@ function RegisterContent() {
               </div>
             </form>
           </CardContent>
-          <CardFooter className="flex justify-center border-t px-6 py-4">
-            <p className="text-xs text-muted-foreground">
+          <CardFooter className="flex flex-col justify-center border-t px-6 py-4">
+            <p className="text-center mb-4">
+              Already have an account?{' '}
+              <Link href="/login" className="font-medium text-primary underline-offset-4 hover:underline">
+                Sign in
+              </Link>
+            </p>
+            <p className="text-xs text-muted-foreground text-center">
               By clicking continue, you agree to our{' '}
               <Link href="/terms" className="underline underline-offset-4 hover:text-primary">
                 Terms of Service
