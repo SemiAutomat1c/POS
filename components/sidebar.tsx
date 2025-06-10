@@ -135,12 +135,10 @@ export default function Sidebar() {
   const sidebarContent = (
     <>
       <div className="p-6 border-b">
-        <h2 className="font-semibold text-xl">GadgetTrack</h2>
-        {storeName ? (
-          <p className="text-sm text-muted-foreground">{storeName}</p>
-        ) : (
-          <p className="text-sm text-muted-foreground">Inventory Management</p>
-        )}
+        <h2 className="font-semibold text-xl">
+          {storeName ? storeName : "GadgetTrack"}
+        </h2>
+        <p className="text-sm text-muted-foreground">Inventory Management</p>
       </div>
       <nav className="flex-1 overflow-auto py-6 px-3">
         <ul className="space-y-1">
