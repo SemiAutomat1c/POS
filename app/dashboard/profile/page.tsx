@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { AuthLoading } from '@/components/ui/loading';
 
 interface UserProfile {
@@ -271,8 +272,14 @@ export default function ProfilePage() {
               )}
             </CardContent>
             <CardFooter>
-              <Button variant="outline" className="w-full">
-                Manage Subscription
+              <Button 
+                asChild
+                variant="outline" 
+                className="w-full"
+              >
+                <Link href="/dashboard/subscription">
+                  Manage Subscription
+                </Link>
               </Button>
             </CardFooter>
           </Card>

@@ -181,8 +181,8 @@ export default function LandingPage() {
                       <span className="text-3xl font-bold">Coming soon!</span>
                     ) : (
                       <>
-                        <span className="text-3xl font-bold">₱{plan.monthlyPrice}</span>
-                        <span className="text-muted-foreground">/month</span>
+                    <span className="text-3xl font-bold">₱{plan.monthlyPrice}</span>
+                    <span className="text-muted-foreground">/month</span>
                       </>
                     )}
                   </div>

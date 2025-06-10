@@ -19,8 +19,9 @@ export async function POST(request: Request) {
     const body = await request.json()
     const validatedData = checkoutSchema.parse(body)
 
-    // Get user from session
-    const sessionToken = cookies().get('session_token')?.value
+    // Get user from session - using await with cookies()
+    const cookiesStore = await cookies()
+    const sessionToken = cookiesStore.get('session_token')?.value
     if (!sessionToken) {
       return NextResponse.json(
         { message: 'Unauthorized' },
@@ -88,8 +89,8 @@ export async function POST(request: Request) {
         planId: validatedData.planId,
         isAnnual: validatedData.isAnnual.toString(),
       },
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?subscription=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/subscribe?plan=${validatedData.planId}`,
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard?subscription=success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/subscribe?plan=${validatedData.planId}`,
     })
 
     return NextResponse.json({ sessionId: session.id })

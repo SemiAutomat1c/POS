@@ -7,18 +7,22 @@ import {
   ShoppingCart, 
   Users, 
   CheckCircle2, 
-  RefreshCw, 
-  Smartphone, 
-  Laptop, 
-  Download, 
-  Apple, 
-  Chrome, 
-  Globe,
-  Plus,
-  PlusSquare,
+  RefreshCw,
+  Download,
+  Apple,
+  Smartphone,
+  Laptop,
   Share,
+  PlusSquare,
+  Chrome,
   MoreVertical,
-  ArrowDownToLine
+  Plus,
+  Globe,
+  ArrowDownToLine,
+  BarChart3,
+  Zap,
+  Shield,
+  Cloud
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,12 +30,12 @@ import Link from "next/link"
 import { plans } from '@/lib/subscription/plans'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { getProducts, getCustomers, getSales, getReturns } from '@/lib/db-adapter'
 import { demoStats } from '@/lib/demo-data'
 import { supabase } from '@/lib/storage/supabase'
-import { AuthLoading } from '@/components/ui/loading'
+import dynamic from 'next/dynamic'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 // Safari icon component since it's not included in lucide-react
@@ -86,6 +90,20 @@ function StatCard({ title, value, icon: Icon, description }: StatCardProps) {
     </Card>
   )
 }
+
+// Import AuthLoading with no SSR
+const AuthLoading = dynamic(() => import('@/components/client-auth-loading'), { 
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
+      <div className="bg-white p-8 rounded-lg shadow-lg flex flex-col items-center">
+        <div className="h-10 w-10 mb-4"></div>
+        <h3 className="text-lg font-medium mb-1">Loading...</h3>
+        <p className="text-sm text-muted-foreground">Please wait</p>
+      </div>
+    </div>
+  )
+})
 
 export default function LandingPage() {
   const [isMounted, setIsMounted] = useState(false)
@@ -205,24 +223,42 @@ export default function LandingPage() {
   const features = [
     {
       title: 'Inventory Management',
-      description: 'Track stock levels, set reorder points, and manage product variants with ease.',
+      description: 'Track stock levels, set reorder points, and manage product variants with ease. Includes barcode scanning, bulk import/export, and category management.',
       icon: <Package className="h-6 w-6" />,
     },
     {
       title: 'Point of Sale',
-      description: 'Fast and intuitive checkout process with support for multiple payment methods.',
+      description: 'Fast and intuitive checkout process with support for multiple payment methods including cash, credit cards, and mobile payments. Works online and offline.',
       icon: <ShoppingCart className="h-6 w-6" />,
     },
     {
       title: 'Customer Management',
-      description: 'Build lasting relationships with customer profiles and purchase history.',
+      description: 'Build lasting relationships with customer profiles, purchase history, and loyalty programs. Send automated notifications and personalized offers.',
       icon: <Users className="h-6 w-6" />,
+    },
+    {
+      title: 'Sales Analytics',
+      description: 'Comprehensive reports and dashboards showing sales trends, best-selling products, and customer insights to make data-driven business decisions.',
+      icon: <BarChart3 className="h-6 w-6" />,
+    },
+    {
+      title: 'Multi-device Access',
+      description: 'Access your store from any device with our responsive web app and native mobile applications. Your data syncs automatically across all devices.',
+      icon: <Smartphone className="h-6 w-6" />,
+    },
+    {
+      title: 'Returns Processing',
+      description: 'Handle product returns and exchanges seamlessly with our integrated returns management system. Track return reasons for quality improvement.',
+      icon: <RefreshCw className="h-6 w-6" />,
     },
   ]
 
   // Show loading state while checking auth
   if (initialAuthChecking) {
-    return <AuthLoading />;
+    // Render a minimal loading placeholder during SSR, which will be replaced by AuthLoading on the client
+    return (
+      <AuthLoading />
+    );
   }
 
   return (
@@ -269,19 +305,8 @@ export default function LandingPage() {
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" size="lg" className="gap-2">
-                    <Link href="#installation" onClick={(e) => {
-                      e.preventDefault();
-                      document.querySelector('#installation')?.scrollIntoView({ 
-                        behavior: 'smooth' 
-                      });
-                    }}>
-                      <Smartphone className="h-4 w-4" />
-                      Install on Device
-                    </Link>
-                  </Button>
                   <Button asChild variant="outline" size="lg">
-                    <Link href="/dashboard/demo">Live Demo</Link>
+                    <Link href="/demo">Live Demo</Link>
                   </Button>
                 </motion.div>
               </>
@@ -330,8 +355,137 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Detailed Features Section */}
+      <section className="py-20 bg-background">
+        <div className="container">
+          <motion.div
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            layout
+          >
+            <h2 className="text-3xl font-bold mb-4">Powerful Features for Modern Retailers</h2>
+            <p className="text-muted-foreground max-w-3xl mx-auto">
+              GadgetTrack is designed to grow with your business, from a single store to multiple locations.
+              Our platform provides all the tools you need to manage inventory, process sales, and understand your customers.
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 gap-12 items-center mb-16">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="bg-muted p-1 rounded-lg border">
+                <div className="aspect-video bg-card rounded overflow-hidden">
+                  {/* Replace with actual screenshot or illustration */}
+                  <div className="h-full w-full bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center">
+                    <Package className="h-16 w-16 text-primary/40" />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <h3 className="text-2xl font-bold mb-4">Seamless Inventory Management</h3>
+              <p className="text-muted-foreground mb-6">
+                Never run out of stock or overstock again. Our intelligent inventory system 
+                tracks everything in real-time and alerts you when items need reordering.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex gap-3">
+                  <div className="flex-shrink-0 h-6 w-6 bg-primary/10 rounded-full flex items-center justify-center">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <span className="font-medium">Barcode scanning</span> for quick product lookups and inventory counts
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <div className="flex-shrink-0 h-6 w-6 bg-primary/10 rounded-full flex items-center justify-center">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <span className="font-medium">Automatic reorder notifications</span> when stock levels fall below thresholds
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <div className="flex-shrink-0 h-6 w-6 bg-primary/10 rounded-full flex items-center justify-center">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <span className="font-medium">Product variants</span> with separate tracking for size, color, and other attributes
+                  </div>
+                </li>
+              </ul>
+            </motion.div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-12 items-center mb-16 md:flex-row-reverse">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="md:order-2"
+            >
+              <div className="bg-muted p-1 rounded-lg border">
+                <div className="aspect-video bg-card rounded overflow-hidden">
+                  {/* Replace with actual screenshot or illustration */}
+                  <div className="h-full w-full bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center">
+                    <ShoppingCart className="h-16 w-16 text-primary/40" />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="md:order-1"
+            >
+              <h3 className="text-2xl font-bold mb-4">Modern Point of Sale</h3>
+              <p className="text-muted-foreground mb-6">
+                Process sales quickly and efficiently with our intuitive POS interface.
+                Works on any device and even functions offline to keep your business running smoothly.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex gap-3">
+                  <div className="flex-shrink-0 h-6 w-6 bg-primary/10 rounded-full flex items-center justify-center">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <span className="font-medium">Touch-friendly interface</span> designed for speed and accuracy
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <div className="flex-shrink-0 h-6 w-6 bg-primary/10 rounded-full flex items-center justify-center">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <span className="font-medium">Multiple payment options</span> including credit cards, cash, and mobile payments
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <div className="flex-shrink-0 h-6 w-6 bg-primary/10 rounded-full flex items-center justify-center">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <span className="font-medium">Offline capability</span> ensures you can continue selling even without internet
+                  </div>
+                </li>
+              </ul>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* Stats Section */}
-      <section className="py-16 bg-background">
+      <section className="py-16 bg-muted/30">
         <div className="container">
           <motion.h2
             className="text-3xl font-bold text-center mb-12"
@@ -770,7 +924,6 @@ export default function LandingPage() {
                           behavior: 'smooth' 
                         });
                       }}>
-                        <Download className="mr-2 h-4 w-4" />
                         Install App
                       </Link>
                     </Button>

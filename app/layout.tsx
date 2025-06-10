@@ -5,7 +5,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import RootLayoutClient from '@/components/root-layout-client'
 import { StorageProvider } from "@/components/providers/StorageProvider"
 import { Providers as AuthProviders } from '@/providers'
-import { WebApplicationJsonLd, OrganizationJsonLd } from '@/components/structured-data'
+import StructuredData from './structured-data'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -54,10 +54,9 @@ export default function RootLayout({
             }
           `
         }} />
-        <WebApplicationJsonLd />
-        <OrganizationJsonLd />
       </head>
       <body className={inter.className} suppressHydrationWarning>
+        <StructuredData />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

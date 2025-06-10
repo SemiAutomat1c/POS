@@ -1,4 +1,4 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -22,8 +22,25 @@ export async function middleware(req: NextRequest) {
   // Create Next.js response
   const res = NextResponse.next();
   
-  // Create Supabase client for session checks
-  const supabase = createMiddlewareClient({ req, res });
+  // Create Supabase client using the newer SSR package
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name) {
+          return req.cookies.get(name)?.value;
+        },
+        set(name, value, options) {
+          res.cookies.set(name, value, options);
+        },
+        remove(name, options) {
+          res.cookies.delete(name, options);
+        },
+      },
+    }
+  );
+  
   const { data: { session } } = await supabase.auth.getSession();
   const isAuthenticated = !!session;
   
@@ -37,11 +54,25 @@ export async function middleware(req: NextRequest) {
     '/custom-signup',
   ];
   
+  // Routes that authenticated users should be able to access directly (not redirect to dashboard)
+  const authenticatedAccessRoutes = [
+    '/subscription',
+  ];
+  
+  // Routes that require authentication but shouldn't redirect to dashboard
+  const protectedRoutes = [
+    '/subscription',
+  ];
+  
   // Check if current path is exact match for a route that should redirect
   const isAuthRedirectRoute = authRedirectRoutes.includes(req.nextUrl.pathname);
   
+  // Check if current path is a route that authenticated users should be able to access directly
+  const isAuthenticatedAccessRoute = authenticatedAccessRoutes.includes(req.nextUrl.pathname);
+  
   // If user is logged in and trying to access a route that should redirect to dashboard
-  if (isAuthenticated && isAuthRedirectRoute) {
+  // but not a route that authenticated users should be able to access directly
+  if (isAuthenticated && isAuthRedirectRoute && !isAuthenticatedAccessRoute) {
     console.log(`[${requestId}] User is authenticated, redirecting from ${req.nextUrl.pathname} to dashboard`);
     const dashboardUrl = new URL('/dashboard', req.url);
     return NextResponse.redirect(dashboardUrl);
@@ -58,6 +89,7 @@ export async function middleware(req: NextRequest) {
     '/simple-register',
     '/api-test',
     '/dashboard/demo',
+    '/demo',  // New demo page at root level
     '/',  // Landing page
     '/custom-signup',  // Custom signup page
     '/auth-test',  // Authentication test page
@@ -66,7 +98,8 @@ export async function middleware(req: NextRequest) {
   
   // Check if the current path is a public route or an API route
   const isPublicRoute = publicRoutes.some(route => 
-    req.nextUrl.pathname === route || req.nextUrl.pathname.startsWith(route + '/')
+    req.nextUrl.pathname === route || req.nextUrl.pathname.startsWith(route + '/') || 
+    (route === '/dashboard/demo' && req.nextUrl.pathname.startsWith('/dashboard/demo'))
   );
   
   const isApiRoute = req.nextUrl.pathname.startsWith('/api/');
@@ -104,9 +137,12 @@ export async function middleware(req: NextRequest) {
       return response;
     }
     
-    // If no session and not a public route, redirect to login
-    if (!isAuthenticated && !isPublicRoute && !isApiRoute) {
-      console.log(`[${requestId}] No active session. Redirecting to login from: ${req.nextUrl.pathname}`);
+      // Check if the current path requires authentication
+  const requiresAuth = authenticatedAccessRoutes.includes(req.nextUrl.pathname);
+  
+  // If no session and not a public route, redirect to login
+  if (!isAuthenticated && (!isPublicRoute || requiresAuth) && !isApiRoute) {
+    console.log(`[${requestId}] No active session. Redirecting to login from: ${req.nextUrl.pathname}`);
       
       // Increment redirect count
       redirectCounts.set(currentPath, redirectCount + 1);
@@ -163,5 +199,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)','/', '/register', '/login'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)','/', '/register', '/login', '/subscription', '/dashboard/demo', '/demo'],
 }; 

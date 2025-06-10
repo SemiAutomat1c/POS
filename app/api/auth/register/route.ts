@@ -254,6 +254,38 @@ export async function POST(request: Request) {
           );
         }
 
+        // Create a subscription record
+        console.log('Creating subscription record');
+        const trialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        
+        const { error: subscriptionError } = await supabase
+          .from('subscriptions')
+          .insert([
+            {
+              user_id: authData.user.id,
+              store_id: store.id,
+              tier: tier,
+              status: 'trial',
+              current_period_start: new Date(),
+              current_period_end: trialEndDate,
+              cancel_at_period_end: tier === 'free' ? false : true // For free tier, no need to cancel; for paid tiers, default to cancel after trial
+            }
+          ]);
+          
+        if (subscriptionError) {
+          console.error('Subscription creation error:', {
+            message: subscriptionError.message,
+            details: subscriptionError.details,
+            hint: subscriptionError.hint,
+            code: subscriptionError.code
+          });
+          // We don't need to clean up here since user and store are already created
+          // Just log the error and continue
+          console.warn('Failed to create subscription record, but continuing with registration');
+        } else {
+          console.log('Subscription record created successfully');
+        }
+
         console.log('Registration completed successfully');
         
         // Return appropriate response based on email confirmation status

@@ -6,10 +6,13 @@ import { SearchBar } from "@/components/search-bar"
 import { Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
-import { Toaster } from "@/components/ui/toaster"
+import dynamic from 'next/dynamic'
 import DatabaseProvider from "@/components/database-provider"
 import { OfflineIndicator } from "@/components/offline-indicator"
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
+
+// Use dynamic import with no SSR for the Toaster
+const ClientToaster = dynamic(() => import('@/components/client-toaster'), { ssr: false });
 
 export default function RootLayoutClient({
   children,
@@ -21,13 +24,13 @@ export default function RootLayoutClient({
                           pathname.startsWith('/login') || 
                           pathname.startsWith('/register')
 
-  const isDemoPage = pathname.startsWith('/dashboard/demo')
+  const isDemoPage = pathname.startsWith('/dashboard/demo') || pathname.startsWith('/demo')
 
   if (isMarketingPage || isDemoPage) {
     return (
       <DatabaseProvider>
         {children}
-        <Toaster />
+        <ClientToaster />
         <OfflineIndicator />
         <PWAInstallPrompt />
       </DatabaseProvider>
@@ -53,7 +56,7 @@ export default function RootLayoutClient({
           </main>
         </div>
       </div>
-      <Toaster />
+      <ClientToaster />
       <OfflineIndicator />
       <PWAInstallPrompt />
     </DatabaseProvider>

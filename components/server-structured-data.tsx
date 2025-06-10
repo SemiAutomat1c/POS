@@ -1,4 +1,4 @@
-'use client';
+import JsonLd from './json-ld'
 
 export function WebApplicationJsonLd() {
   const structuredData = {
@@ -15,15 +15,7 @@ export function WebApplicationJsonLd() {
     }
   };
 
-  return (
-    <script
-      key="web-application-jsonld"
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{
-        __html: JSON.stringify(structuredData)
-      }}
-    />
-  );
+  return <JsonLd id="web-application-jsonld" data={structuredData} />;
 }
 
 export function OrganizationJsonLd() {
@@ -36,13 +28,6 @@ export function OrganizationJsonLd() {
     "logo": "https://example.com/icons/icon-512x512.png", // Replace with your actual logo URL
   };
 
-  return (
-    <script
-      key="organization-jsonld"
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{
-        __html: JSON.stringify(structuredData)
-      }}
-    />
-  );
+  return <JsonLd id="organization-jsonld" data={structuredData} />;
 } 
+ 

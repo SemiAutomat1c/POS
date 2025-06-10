@@ -13,5 +13,10 @@
         { "key": "X-XSS-Protection", "value": "1; mode=block" }
       ]
     }
-  ]
+  ],
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://qwxydlvuioskvgxdkuvf.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3eHlkbHZ1aW9za3ZneGRrdXZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzOTM4OTQsImV4cCI6MjA2NDk2OTg5NH0.WhY9Lh7f-MtGcEs1k_o0y-yMUmGrRUnDHgBgFYUdB1c",
+    "NEXT_PUBLIC_SITE_URL": "https://pos-gadgettrack.vercel.app"
+  }
 } 
