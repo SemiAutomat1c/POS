@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/storage/supabase';
@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { plans } from '@/lib/subscription/plans';
 import { AuthLoading } from '@/components/ui/loading';
 
-export default function RegisterPage() {
+// Create a client component that safely uses useSearchParams
+function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const planParam = searchParams.get('plan');
@@ -225,6 +226,60 @@ export default function RegisterPage() {
     );
   }
 
+  // If registration was successful
+  if (registrationSuccess) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <motion.div 
+          className="w-full max-w-md"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Card className="shadow-lg">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+              <CardTitle className="text-3xl font-bold tracking-tight text-green-600">
+                Registration Successful!
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+              {emailConfirmationRequired ? (
+                <div>
+                  <p className="mb-4">
+                    We've sent a confirmation email to <strong>{registeredEmail}</strong>.
+                  </p>
+                  <p>
+                    Please check your inbox and click the confirmation link to activate your account.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p className="mb-4">
+                    Your account has been created successfully.
+                  </p>
+                  <p>
+                    You will be redirected to the login page shortly.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+            <CardFooter className="flex justify-center">
+              <Button 
+                variant="outline" 
+                onClick={() => router.push('/login')}
+              >
+                Go to Login
+              </Button>
+            </CardFooter>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <motion.div 
@@ -248,299 +303,156 @@ export default function RegisterPage() {
               </Link>
             </p>
           </CardHeader>
-          
           <CardContent>
             {error && (
-              <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-destructive">
-                <h3 className="text-sm font-medium">
-                  Registration failed
-                </h3>
-                <div className="mt-2 text-sm">
-                  <p>{error}</p>
-                  {(error.includes('already exists') || error.includes('already registered') || error.includes('already taken')) && (
-                    <div className="mt-4">
-                      <p className="text-xs mb-2">
-                        If you deleted your account and are trying to register again with the same details, 
-                        you may need to clean up old data.
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="w-full border-destructive/30 text-destructive hover:bg-destructive/10"
-                        onClick={async () => {
-                          try {
-                            setLoading(true);
-                            const response = await fetch('/api/auth/cleanup-user', {
-                              method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json',
-                              },
-                              body: JSON.stringify({
-                                email: formValues.email,
-                                username: formValues.username
-                              }),
-                            });
-                            
-                            const data = await response.json();
-                            
-                            if (data.success) {
-                              setError('Old data cleaned up. Please try registering again.');
-                            } else {
-                              setError(`Cleanup failed: ${data.error || data.message || 'Unknown error'}`);
-                            }
-                          } catch (err: any) {
-                            setError(`Cleanup error: ${err.message || 'Unknown error'}`);
-                          } finally {
-                            setLoading(false);
-                          }
-                        }}
-                      >
-                        Clean Up Old Data
-                      </Button>
-                      
-                      <p className="text-xs mt-3 text-center text-muted-foreground">
-                        If automatic cleanup fails, try the{' '}
-                        <Link href="/admin-cleanup.html" target="_blank" className="text-primary underline">
-                          Admin Cleanup Tool
-                        </Link>
-                      </p>
+              <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
                     </div>
-                  )}
+                    <Input 
+                      id="email" 
+                      name="email"
+                      type="email" 
+                      placeholder="you@example.com" 
+                      className="pl-10"
+                      value={formValues.email}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {emailConfirmationRequired && registeredEmail && (
-              <div className="mb-6 rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-green-600 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-500">
-                <h3 className="text-sm font-medium">
-                  Registration successful!
-                </h3>
-                <div className="mt-2 text-sm">
-                  <p>Please check your email ({registeredEmail}) to confirm your account.</p>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="username">Username</Label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <Input 
+                      id="username" 
+                      name="username"
+                      placeholder="yourname" 
+                      className="pl-10"
+                      value={formValues.username}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
-            
-            {registrationSuccess && !emailConfirmationRequired && (
-              <div className="mb-6 rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-green-600 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-500">
-                <div className="flex items-center">
-                  <CheckCircle className="h-5 w-5 mr-2" />
-                  <h3 className="text-sm font-medium">
-                    Registration successful!
-                  </h3>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="storeName">Store Name</Label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <Building className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <Input 
+                      id="storeName" 
+                      name="storeName"
+                      placeholder="Your Store" 
+                      className="pl-10"
+                      value={formValues.storeName}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
                 </div>
-                <div className="mt-2 text-sm">
-                  <p>Your account has been created successfully.</p>
-                  <p className="mt-1">You selected the <strong>{formValues.plan}</strong> plan.</p>
-                  <p className="mt-1">Redirecting to login page in a moment...</p>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <Input 
+                      id="password" 
+                      name="password"
+                      type="password" 
+                      placeholder="••••••••" 
+                      className="pl-10"
+                      value={formValues.password}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Password must be at least 8 characters long
+                  </p>
                 </div>
-                <div className="mt-4">
-                  <Button 
-                    variant="outline" 
-                    className="w-full border-green-500/30 text-green-600 hover:bg-green-50 hover:text-green-700"
-                    onClick={() => router.push('/login?registered=true')}
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="plan">Subscription Plan</Label>
+                  <Select 
+                    name="plan" 
+                    value={formValues.plan}
+                    onValueChange={(value) => setFormValues(prev => ({ ...prev, plan: value }))}
                   >
-                    Go to Login
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a plan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plans.map((plan) => (
+                        <SelectItem key={plan.id} value={plan.id}>
+                          {plan.name} (${plan.monthlyPrice}/month)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    You can change your plan later
+                  </p>
                 </div>
               </div>
-            )}
-
-            {!registrationSuccess && !emailConfirmationRequired && (
-              <form className="space-y-6" onSubmit={handleSubmit}>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">
-                      Email address
-                    </Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        autoComplete="email"
-                        required
-                        className="pl-10"
-                        placeholder="you@example.com"
-                        value={formValues.email}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="username">
-                      Username
-                    </Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="username"
-                        name="username"
-                        type="text"
-                        autoComplete="username"
-                        required
-                        className="pl-10"
-                        placeholder="yourname"
-                        value={formValues.username}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">This will be your login identifier</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="password">
-                      Password
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="password"
-                        name="password"
-                        type="password"
-                        autoComplete="new-password"
-                        required
-                        minLength={6}
-                        className="pl-10"
-                        placeholder="••••••"
-                        value={formValues.password}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">Minimum 6 characters</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="storeName">
-                      Store name
-                    </Label>
-                    <div className="relative">
-                      <Building className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="storeName"
-                        name="storeName"
-                        type="text"
-                        required
-                        className="pl-10"
-                        placeholder="My Awesome Store"
-                        value={formValues.storeName}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="plan">Selected Plan</Label>
-                    <Select 
-                      value={formValues.plan} 
-                      onValueChange={(value) => setFormValues(prev => ({ ...prev, plan: value as 'free' | 'basic' | 'premium' | 'enterprise' }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a plan" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="free">Starter - Free</SelectItem>
-                        <SelectItem value="basic">Basic - ₱249/month</SelectItem>
-                        <SelectItem value="premium">Premium - ₱499/month</SelectItem>
-                        <SelectItem value="enterprise" disabled>Enterprise - Coming Soon</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="p-3 bg-muted rounded-md mt-2">
-                      {formValues.plan === 'free' && (
-                        <>
-                          <p className="text-sm font-medium">Starter Plan</p>
-                          <p className="text-xs text-muted-foreground">Basic features for small businesses</p>
-                          <ul className="text-xs text-muted-foreground mt-1 list-disc list-inside">
-                            <li>Up to 1 location</li>
-                            <li>Up to 2 users</li>
-                            <li>Up to 50 products</li>
-                          </ul>
-                        </>
-                      )}
-                      {formValues.plan === 'basic' && (
-                        <>
-                          <p className="text-sm font-medium">Basic Plan</p>
-                          <p className="text-xs text-muted-foreground">Essential features for growing businesses</p>
-                          <ul className="text-xs text-muted-foreground mt-1 list-disc list-inside">
-                            <li>Up to 2 locations</li>
-                            <li>Up to 10 users</li>
-                            <li>Up to 100 products</li>
-                            <li>Customer database</li>
-                          </ul>
-                        </>
-                      )}
-                      {formValues.plan === 'premium' && (
-                        <>
-                          <p className="text-sm font-medium">Premium Plan</p>
-                          <p className="text-xs text-muted-foreground">Advanced features for established businesses</p>
-                          <ul className="text-xs text-muted-foreground mt-1 list-disc list-inside">
-                            <li>Up to 5 locations</li>
-                            <li>Up to 15 users</li>
-                            <li>Up to 500 products</li>
-                            <li>Advanced analytics</li>
-                            <li>API access</li>
-                          </ul>
-                        </>
-                      )}
-                      {formValues.plan === 'enterprise' && (
-                        <>
-                          <p className="text-sm font-medium">Enterprise Plan - Coming Soon</p>
-                          <p className="text-xs text-muted-foreground">Full feature set with dedicated support</p>
-                          <ul className="text-xs text-muted-foreground mt-1 list-disc list-inside">
-                            <li>Up to 10 locations</li>
-                            <li>Up to 50 users</li>
-                            <li>Up to 100,000 products</li>
-                            <li>Custom reports</li>
-                            <li>Dedicated support</li>
-                          </ul>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full"
-                >
+              
+              <div className="mt-6">
+                <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? (
-                    <span className="flex items-center justify-center">
-                      <svg className="mr-2 h-4 w-4 animate-spin text-primary-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Registering...
-                    </span>
+                    <div className="flex items-center justify-center">
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                      <span className="ml-2">Creating account...</span>
+                    </div>
                   ) : (
-                    <span className="flex items-center justify-center">
-                      Create Account
+                    <div className="flex items-center justify-center">
+                      <span>Create account</span>
                       <ArrowRight className="ml-2 h-4 w-4" />
-                    </span>
+                    </div>
                   )}
                 </Button>
-              </form>
-            )}
+              </div>
+            </form>
           </CardContent>
-          
-          <CardFooter className="flex-col space-y-4 border-t bg-muted/50 p-6">
-            <div className="text-center text-sm">
-              <p className="text-muted-foreground">
-                Already have an account?{' '}
-                <Link href="/login" className="font-medium text-primary underline-offset-4 hover:underline">
-                  Sign in
-                </Link>
-              </p>
-            </div>
-            <div className="text-center text-xs text-muted-foreground">
-              &copy; {new Date().getFullYear()} GadgetTrack. All rights reserved.
-            </div>
+          <CardFooter className="flex justify-center border-t px-6 py-4">
+            <p className="text-xs text-muted-foreground">
+              By clicking continue, you agree to our{' '}
+              <Link href="/terms" className="underline underline-offset-4 hover:text-primary">
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link href="/privacy" className="underline underline-offset-4 hover:text-primary">
+                Privacy Policy
+              </Link>
+              .
+            </p>
           </CardFooter>
         </Card>
       </motion.div>
     </div>
+  );
+}
+
+// Main component that wraps the content in Suspense
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<AuthLoading />}>
+      <RegisterContent />
+    </Suspense>
   );
 } 
