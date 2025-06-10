@@ -398,32 +398,53 @@ function RegisterContent() {
                     value={formValues.plan}
                     onValueChange={(value) => setFormValues(prev => ({ ...prev, plan: value }))}
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a plan" />
+                    <SelectTrigger className="w-full h-auto py-2">
+                      <div className="flex flex-col w-full text-left overflow-hidden">
+                        <div className="flex justify-between w-full items-center">
+                          <span className="font-medium">{plans.find(p => p.id === formValues.plan)?.name || 'Select a plan'}</span>
+                          {formValues.plan !== 'free' && formValues.plan !== 'enterprise' && (
+                            <span className="text-sm whitespace-nowrap ml-2">₱{plans.find(p => p.id === formValues.plan)?.monthlyPrice}/month</span>
+                          )}
+                        </div>
+                        {formValues.plan && formValues.plan !== 'select' && (
+                          <div className="text-xs text-muted-foreground line-clamp-1 mt-1">
+                            {plans.find(p => p.id === formValues.plan)?.description}
+                          </div>
+                        )}
+                      </div>
                     </SelectTrigger>
                     <SelectContent 
                       position="popper" 
                       sideOffset={5} 
-                      className="max-h-[300px] w-full overflow-y-auto z-50"
+                      className="max-h-[300px] w-[calc(100%-20px)] overflow-y-auto z-50"
                       align="center"
                     >
                       {plans.map((plan) => (
                         <SelectItem 
                           key={plan.id} 
                           value={plan.id} 
-                          className="py-2 focus:bg-accent focus:text-accent-foreground"
+                          className="py-3 px-3 focus:bg-accent focus:text-accent-foreground border-b last:border-0"
                           disabled={plan.id === 'enterprise'}
                         >
                           <div className="flex flex-col gap-1 w-full overflow-hidden">
-                            <div className="flex justify-between w-full">
+                            <div className="flex justify-between w-full items-center">
                               <span className="font-medium">{plan.name}</span> 
-                              <span className="ml-2 whitespace-nowrap">{plan.id === 'free' || plan.id === 'enterprise' ? 'Free' : `₱${plan.monthlyPrice}/month`}</span>
+                              <span className="ml-2 whitespace-nowrap font-medium">{plan.id === 'free' || plan.id === 'enterprise' ? 'Free' : `₱${plan.monthlyPrice}/month`}</span>
                             </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2">{plan.description}</p>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              <span className="inline-block">Up to {plan.limits.products} products</span> • 
-                              <span className="inline-block ml-1">{plan.limits.users} users</span> • 
-                              <span className="inline-block ml-1">{plan.limits.locations} location{plan.limits.locations > 1 ? 's' : ''}</span>
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{plan.description}</p>
+                            <div className="text-xs text-muted-foreground mt-2 flex flex-wrap">
+                              <div className="flex items-center gap-1 mr-2">
+                                <span>•</span>
+                                <span>Up to {plan.limits.products} products</span>
+                              </div>
+                              <div className="flex items-center gap-1 mr-2">
+                                <span>•</span>
+                                <span>{plan.limits.users} users</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span>•</span>
+                                <span>{plan.limits.locations} location{plan.limits.locations > 1 ? 's' : ''}</span>
+                              </div>
                             </div>
                           </div>
                         </SelectItem>
