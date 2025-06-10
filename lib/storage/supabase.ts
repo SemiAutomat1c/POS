@@ -2,41 +2,46 @@ import { createClient } from '@supabase/supabase-js'
 import { Database } from './supabase-types'
 import { localDB } from './indexeddb'
 
-const getSupabaseUrl = () => {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  if (!url) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('Missing NEXT_PUBLIC_SUPABASE_URL - using fallback URL for development')
-      return 'http://localhost:54321' // Default Supabase local development URL
-    }
-    throw new Error('Missing required environment variable: NEXT_PUBLIC_SUPABASE_URL')
-  }
-  return url
-}
+// Create a singleton instance of Supabase client to use throughout the app
+// This prevents the "Multiple GoTrueClient instances" warning
+let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
 
-const getSupabaseAnonKey = () => {
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!key) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY - using fallback key for development')
-      return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' // Default local development anon key
-    }
-    throw new Error('Missing required environment variable: NEXT_PUBLIC_SUPABASE_ANON_KEY')
+export const supabase = (() => {
+  if (supabaseInstance) return supabaseInstance;
+  
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!url || !key) {
+    console.error('Missing Supabase credentials');
+    throw new Error('Missing Supabase credentials');
   }
-  return key
-}
+  
+  supabaseInstance = createClient<Database>(
+    url,
+    key,
+    {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+        storageKey: 'supabase.auth.token',
+      },
+      global: {
+        headers: {
+          'x-application-name': 'gadget-track-pos',
+        },
+      },
+    }
+  );
+  
+  return supabaseInstance;
+})();
 
-export const supabase = createClient<Database>(
-  getSupabaseUrl(),
-  getSupabaseAnonKey(),
-  {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
-    }
-  }
-)
+// Export a function that ensures we're using the same client instance
+export const getSupabaseClient = () => {
+  return supabase;
+};
 
 export class SyncManager {
   private syncInterval: NodeJS.Timeout | null = null

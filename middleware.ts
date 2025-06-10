@@ -56,13 +56,11 @@ export async function middleware(req: NextRequest) {
   
   // Routes that authenticated users should be able to access directly (not redirect to dashboard)
   const authenticatedAccessRoutes = [
-    '/subscription',
     '/dashboard/subscription',
   ];
   
   // Routes that require authentication but shouldn't redirect to dashboard
   const protectedRoutes = [
-    '/subscription',
     '/dashboard/subscription',
   ];
   
@@ -113,9 +111,12 @@ export async function middleware(req: NextRequest) {
   }
   
   try {
-    // Check for redirect loop prevention cookie
-    const loopPreventionCookie = req.cookies.get('redirect_loop_prevention');
-    if (loopPreventionCookie?.value === 'true') {
+    // Check for redirect loop prevention cookies
+    const redirectLoopPreventionCookie = req.cookies.get('redirect_loop_prevention');
+    const subscriptionRedirectPreventionCookie = req.cookies.get('subscription_redirect_prevention');
+    
+    if ((redirectLoopPreventionCookie && redirectLoopPreventionCookie.value === 'true') || 
+        (subscriptionRedirectPreventionCookie && subscriptionRedirectPreventionCookie.value === 'true')) {
       console.log(`[${requestId}] Redirect loop prevention cookie found, allowing access to: ${req.nextUrl.pathname}`);
       return NextResponse.next();
     }
@@ -130,7 +131,9 @@ export async function middleware(req: NextRequest) {
       
       // Set a cookie to prevent further redirects
       const response = NextResponse.next();
-      response.cookies.set('redirect_loop_prevention', 'true', { 
+      response.cookies.set({
+        name: 'redirect_loop_prevention',
+        value: 'true',
         path: '/',
         maxAge: 60, // 60 seconds
         httpOnly: false
@@ -139,12 +142,13 @@ export async function middleware(req: NextRequest) {
       return response;
     }
     
-      // Check if the current path requires authentication
-  const requiresAuth = authenticatedAccessRoutes.includes(req.nextUrl.pathname);
-  
-  // If no session and not a public route, redirect to login
-  if (!isAuthenticated && (!isPublicRoute || requiresAuth) && !isApiRoute) {
-    console.log(`[${requestId}] No active session. Redirecting to login from: ${req.nextUrl.pathname}`);
+    // Check if the current path requires authentication
+    const requiresAuth = req.nextUrl.pathname.startsWith('/dashboard/') ||
+                        protectedRoutes.includes(req.nextUrl.pathname);
+    
+    // If no session and not a public route, redirect to login
+    if (!isAuthenticated && (!isPublicRoute || requiresAuth) && !isApiRoute) {
+      console.log(`[${requestId}] No active session. Redirecting to login from: ${req.nextUrl.pathname}`);
       
       // Increment redirect count
       redirectCounts.set(currentPath, redirectCount + 1);
@@ -156,7 +160,9 @@ export async function middleware(req: NextRequest) {
       const redirectResponse = NextResponse.redirect(loginUrl);
       
       // Set a flag cookie to indicate we're in a redirect flow
-      redirectResponse.cookies.set('auth_redirect', 'true', { 
+      redirectResponse.cookies.set({
+        name: 'auth_redirect',
+        value: 'true',
         path: '/',
         maxAge: 5, // 5 seconds
         httpOnly: false
@@ -173,7 +179,9 @@ export async function middleware(req: NextRequest) {
       redirectCounts.delete(currentPath);
       
       // Set a cookie to indicate successful authentication
-      res.cookies.set('auth_verified', 'true', {
+      res.cookies.set({
+        name: 'auth_verified',
+        value: 'true',
         path: '/',
         maxAge: 60, // 60 seconds
         httpOnly: false

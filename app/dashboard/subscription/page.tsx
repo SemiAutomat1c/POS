@@ -1,49 +1,32 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import SubscriptionManagement from '@/components/subscription/SubscriptionManagement';
 import { AuthLoading } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/providers/AuthProvider';
 import { clearAllCookies } from '@/lib/utils';
+import { supabase } from '@/lib/storage/supabase';
 
 export default function DashboardSubscriptionPage() {
   const router = useRouter();
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  const { user, loading: authLoading, refreshAuth } = useAuth();
+  const { user, loading: authLoading, logout, error: authError } = useAuth();
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<any>(null);
   const [subscriptionData, setSubscriptionData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [authTimeoutExpired, setAuthTimeoutExpired] = useState(false);
 
-  // Set a timeout to prevent endless loading
+  // Set cookie to prevent potential redirect loops
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      setAuthTimeoutExpired(true);
-      // Try to refresh auth if we're still loading
-      if (authLoading) {
-        refreshAuth();
-      }
-    }, 5000); // 5 seconds timeout
-    
-    return () => clearTimeout(timeout);
-  }, [authLoading, refreshAuth]);
+    // Ensure cookie exists with long expiry
+    document.cookie = "redirect_loop_prevention=true; path=/; max-age=300";
+  }, []);
 
+  // Fetch user and subscription data when auth is ready
   useEffect(() => {
-    // Set cookie to prevent redirect loops 
-    // Make it last longer and use a more specific name
-    document.cookie = "subscription_redirect_prevention=true; path=/; max-age=300";
-    
     async function fetchData() {
-      if (authLoading) return; // Wait for auth to complete
-      
-      if (!user) {
+      if (authLoading || !user) {
         setLoading(false);
         return;
       }
@@ -86,63 +69,15 @@ export default function DashboardSubscriptionPage() {
       }
     }
 
-    if (!authLoading) {
-      fetchData();
-    }
-  }, [user, authLoading, supabase]);
+    fetchData();
+  }, [user, authLoading]);
 
-  // If auth is still loading but timeout expired, give option to reset
-  if ((authLoading || loading) && authTimeoutExpired) {
-    return (
-      <div className="container mx-auto p-4 text-center">
-        <h2 className="text-xl font-bold mb-4">Authentication is taking longer than expected</h2>
-        <p className="mb-4">This could be due to network issues or an authentication problem.</p>
-        <div className="flex flex-col gap-4 items-center justify-center">
-          <Button onClick={() => window.location.reload()}>
-            Try Again
-          </Button>
-          <Button 
-            variant="outline"
-            onClick={() => {
-              // Clear all cookies and go to login
-              clearAllCookies();
-              router.push('/login');
-            }}
-          >
-            Go to Login
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Show loading state while checking authentication
-  if (authLoading || loading) {
+  // Show loading state while fetching data
+  if (loading) {
     return <AuthLoading />;
   }
 
-  // Show not authenticated state if user is not logged in
-  if (!authLoading && !user) {
-    return (
-      <div className="flex h-full items-center justify-center p-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Not Authenticated</h1>
-          <p className="mt-2 text-muted-foreground">Please log in to view subscription information.</p>
-          <Button 
-            className="mt-4" 
-            onClick={() => {
-              // Clear cookies before redirecting
-              clearAllCookies();
-              router.push('/login?redirect=/dashboard/subscription');
-            }}
-          >
-            Go to Login
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
+  // Show error message if something went wrong
   if (error) {
     return (
       <div className="container mx-auto p-4">
@@ -160,6 +95,7 @@ export default function DashboardSubscriptionPage() {
     );
   }
 
+  // Render subscription management component with user data
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Subscription Management</h1>

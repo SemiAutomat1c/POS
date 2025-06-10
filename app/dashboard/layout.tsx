@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/storage/supabase';
 import { useRouter } from 'next/navigation';
 import { AuthLoading } from '@/components/ui/loading';
+import { useAuth } from '@/providers/AuthProvider';
+import { clearAllCookies } from '@/lib/utils';
 
-// Create a global state to track if we've already shown the loading screen
+// Track if we've already shown the loading screen
 let globalAuthCheckStarted = false;
 
 export default function DashboardLayout({
@@ -13,103 +14,56 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'unauthenticated'>(
-    globalAuthCheckStarted ? 'authenticated' : 'loading'
-  );
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [layoutReady, setLayoutReady] = useState(globalAuthCheckStarted);
   const router = useRouter();
+  const { user, loading: authLoading, error: authError } = useAuth();
 
-  // Check authentication status on component mount
+  // Handle authentication on first load
   useEffect(() => {
     // Set global flag to prevent multiple loading states
     globalAuthCheckStarted = true;
     
-    let isMounted = true;
-    let unsubscribe: (() => void) | undefined;
-    
     // Check if we're in a redirect loop prevention scenario
-    const isLoopPrevention = document.cookie.includes('redirect_loop_prevention=true');
+    const isLoopPrevention = document.cookie.includes('redirect_loop_prevention=true') || 
+                             document.cookie.includes('subscription_redirect_prevention=true');
     
     if (isLoopPrevention) {
       console.log('Dashboard layout: Redirect loop prevention active, rendering content');
-      setAuthState('authenticated');
+      setLayoutReady(true);
       // Set a longer cookie to prevent flicker on navigation within dashboard
-      document.cookie = "redirect_loop_prevention=true; path=/; max-age=60";
+      document.cookie = "redirect_loop_prevention=true; path=/; max-age=300";
       return;
     }
     
-    const checkAuth = async () => {
-      try {
-        console.log('Dashboard layout: Checking authentication...');
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Dashboard layout: Error checking auth status:', error);
-          setAuthError(error.message);
-          if (isMounted) setAuthState('unauthenticated');
-          return;
-        }
-        
-        if (!data.session) {
-          console.log('Dashboard layout: No active session');
-          if (isMounted) setAuthState('unauthenticated');
-          return;
-        }
-        
-        console.log('Dashboard layout: User is authenticated:', data.session.user.id);
-        if (isMounted) setAuthState('authenticated');
-        
-        // Set a cookie to prevent flicker on navigation within dashboard
-        document.cookie = "redirect_loop_prevention=true; path=/; max-age=60";
-        
-        // Set up auth state listener
-        const { data: authListener } = supabase.auth.onAuthStateChange(
-          (event, session) => {
-            console.log('Auth state changed:', event);
-            if (event === 'SIGNED_OUT') {
-              setAuthState('unauthenticated');
-            }
-          }
-        );
-        
-        unsubscribe = authListener.subscription.unsubscribe;
-      } catch (err) {
-        console.error('Dashboard layout: Unexpected error during auth check:', err);
-        setAuthError(err instanceof Error ? err.message : 'Unknown error occurred');
-        if (isMounted) setAuthState('unauthenticated');
-      }
-    };
+    // If not loading and user is null, redirect to login
+    if (!authLoading && !user) {
+      console.log('Dashboard layout: No authenticated user found, redirecting to login');
+      setTimeout(() => {
+        clearAllCookies();
+        document.cookie = "redirect_loop_prevention=true; path=/; max-age=10";
+        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+      }, 100);
+      return;
+    }
     
-    checkAuth();
-    
-    return () => {
-      isMounted = false;
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, []);
+    // If user is authenticated, we're ready to show the dashboard
+    if (!authLoading && user) {
+      console.log('Dashboard layout: User authenticated, rendering dashboard');
+      setLayoutReady(true);
+      document.cookie = "redirect_loop_prevention=true; path=/; max-age=300";
+    }
+  }, [user, authLoading, router]);
 
-  if (authState === 'loading') {
+  // Show loading state while checking authentication
+  if (authLoading && !layoutReady) {
     return <AuthLoading />;
   }
 
-  if (authState === 'unauthenticated') {
-    // Set a cookie to prevent redirect loops and then redirect
-    document.cookie = "redirect_loop_prevention=true; path=/; max-age=10";
-    
-    // Use a small timeout to ensure the cookie is set before redirecting
-    setTimeout(() => {
-      window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
-    }, 100);
-    
-    // Show loading state instead of auth error
+  // If not loading, no user, and no redirect yet, show loading until redirect happens
+  if (!authLoading && !user && !layoutReady) {
     return <AuthLoading />;
   }
 
-  return (
-    <div>
-      {children}
-    </div>
-  );
+  // If ready, render the dashboard content
+  return <div>{children}</div>;
 } 
