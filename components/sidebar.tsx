@@ -10,6 +10,7 @@ import { useIsMobile } from "@/components/ui/use-mobile"
 import { useAuth } from "@/providers/AuthProvider"
 import { logout } from "@/lib/auth/actions"
 import { Separator } from "@/components/ui/separator"
+import { supabase } from "@/lib/storage/supabase"
 
 interface NavItem {
   title: string
@@ -80,11 +81,51 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
   const [hasMounted, setHasMounted] = useState(false)
   const { user } = useAuth()
+  const [storeName, setStoreName] = useState<string | null>(null)
 
   useEffect(() => {
     setHasMounted(true)
     setIsOpen(!isMobile)
   }, [isMobile])
+
+  useEffect(() => {
+    // Fetch store name when user is authenticated
+    async function fetchStoreName() {
+      if (!user) return
+      
+      try {
+        // First get the user's store_id
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('store_id')
+          .eq('id', user.id)
+          .single()
+          
+        if (userError || !userData?.store_id) {
+          console.error("Error fetching user's store id:", userError)
+          return
+        }
+        
+        // Then fetch the store name
+        const { data: storeData, error: storeError } = await supabase
+          .from('stores')
+          .select('name')
+          .eq('id', userData.store_id)
+          .single()
+          
+        if (storeError || !storeData) {
+          console.error("Error fetching store name:", storeError)
+          return
+        }
+        
+        setStoreName(storeData.name)
+      } catch (error) {
+        console.error("Error in fetchStoreName:", error)
+      }
+    }
+    
+    fetchStoreName()
+  }, [user])
 
   const handleLogout = async () => {
     await logout()
@@ -95,7 +136,11 @@ export default function Sidebar() {
     <>
       <div className="p-6 border-b">
         <h2 className="font-semibold text-xl">GadgetTrack</h2>
-        <p className="text-sm text-muted-foreground">Inventory Management</p>
+        {storeName ? (
+          <p className="text-sm text-muted-foreground">{storeName}</p>
+        ) : (
+          <p className="text-sm text-muted-foreground">Inventory Management</p>
+        )}
       </div>
       <nav className="flex-1 overflow-auto py-6 px-3">
         <ul className="space-y-1">
