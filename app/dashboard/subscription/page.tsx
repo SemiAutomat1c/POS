@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import SubscriptionManagement from '@/components/subscription/SubscriptionManagement';
 import { AuthLoading } from '@/components/ui/loading';
@@ -10,7 +10,10 @@ import { useAuth } from '@/providers/AuthProvider';
 
 export default function DashboardSubscriptionPage() {
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<any>(null);
