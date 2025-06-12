@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useToast } from '@/components/ui/use-toast';
 import { hasRouteAccess, SubscriptionTier } from '@/lib/subscription';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/lib/storage/supabase';
+import FeatureRestricted from './FeatureRestricted';
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -13,11 +14,15 @@ interface RouteGuardProps {
 
 export default function RouteGuard({ children }: RouteGuardProps) {
   const { user } = useAuth();
-  const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [featureInfo, setFeatureInfo] = useState({
+    title: "Feature Requires Upgrade",
+    message: "Unlock this feature by upgrading to our Basic, Premium, or Enterprise plans.",
+    featureName: "this feature"
+  });
 
   useEffect(() => {
     // Skip authorization check for non-dashboard routes, login, and subscription pages
@@ -57,15 +62,46 @@ export default function RouteGuard({ children }: RouteGuardProps) {
         
         setIsAuthorized(hasAccess);
         
-        // If access is denied, show a toast and redirect to subscription page
+        // If access is denied, set the appropriate feature info based on the pathname
         if (!hasAccess) {
-          toast({
-            title: "Access Denied",
-            description: "Your current subscription does not allow access to this feature. Please upgrade to continue.",
-            variant: "destructive"
-          });
-          
-          router.push('/dashboard/subscription');
+          // Customize the feature info based on the pathname
+          if (pathname?.includes('/reports')) {
+            setFeatureInfo({
+              title: "Reports Require a Basic Plan or Higher",
+              message: "Unlock detailed reports and analytics by upgrading to our Basic, Premium, or Enterprise plans. Get valuable insights into your business performance.",
+              featureName: "reports"
+            });
+          } else if (pathname?.includes('/returns')) {
+            setFeatureInfo({
+              title: "Returns Management Requires a Basic Plan",
+              message: "Process and track returns efficiently by upgrading to our Basic plan or higher. Improve your customer service with better returns handling.",
+              featureName: "returns management"
+            });
+          } else if (pathname?.includes('/payments')) {
+            setFeatureInfo({
+              title: "Advanced Payment Features Require a Basic Plan",
+              message: "Access advanced payment processing and tracking by upgrading to our Basic plan or higher. Streamline your financial operations.",
+              featureName: "advanced payments"
+            });
+          } else if (pathname?.includes('/scanner')) {
+            setFeatureInfo({
+              title: "Scanner Features Require a Basic Plan",
+              message: "Use our advanced barcode scanning features by upgrading to our Basic plan or higher. Speed up inventory management and sales processes.",
+              featureName: "scanner features"
+            });
+          } else if (pathname?.includes('/customers')) {
+            setFeatureInfo({
+              title: "Customer Management Requires a Basic Plan",
+              message: "Manage your customer database and access customer insights by upgrading to our Basic plan or higher. Build better customer relationships.",
+              featureName: "customer management"
+            });
+          } else {
+            setFeatureInfo({
+              title: "Feature Requires Upgrade",
+              message: "This feature requires a higher subscription tier. Please upgrade your plan to access it.",
+              featureName: "this feature"
+            });
+          }
         }
       } catch (error) {
         console.error('Error checking route access:', error);
@@ -82,7 +118,7 @@ export default function RouteGuard({ children }: RouteGuardProps) {
     };
 
     checkAccess();
-  }, [user, pathname, router, toast]);
+  }, [user, pathname, toast]);
 
   // Show loading state
   if (isLoading) {
@@ -93,6 +129,15 @@ export default function RouteGuard({ children }: RouteGuardProps) {
     );
   }
 
+  // Show feature restricted message if not authorized
+  if (!isAuthorized) {
+    return <FeatureRestricted 
+      title={featureInfo.title} 
+      message={featureInfo.message} 
+      featureName={featureInfo.featureName} 
+    />;
+  }
+
   // Render children if authorized
-  return isAuthorized ? <>{children}</> : null;
+  return <>{children}</>;
 } 
