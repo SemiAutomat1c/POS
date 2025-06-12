@@ -226,19 +226,17 @@ export default function Sidebar() {
                 </div>
               </Button>
             </div>
+            
+            {/* System status info - always show when mounted */}
+            <div className="text-xs text-muted-foreground mt-2">
+              <p>Offline Mode Active</p>
+              <p className="mt-1">Last synced: Never</p>
+            </div>
           </div>
         ) : (
           <div className="text-sm text-muted-foreground">
             <p>Offline Mode Active</p>
             <p className="text-xs mt-1">Last synced: Never</p>
-          </div>
-        )}
-        
-        {/* System status info - show regardless of mounted state */}
-        {hasMounted && (
-          <div className="text-xs text-muted-foreground mt-2">
-            <p>Offline Mode Active</p>
-            <p className="mt-1">Last synced: Never</p>
           </div>
         )}
       </div>
