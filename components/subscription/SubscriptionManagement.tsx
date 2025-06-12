@@ -275,7 +275,7 @@ export default function SubscriptionManagement({ user, subscription }: Subscript
                   <CardDescription>For growing businesses</CardDescription>
                 </div>
                 <div className="mt-2">
-                  <span className="text-3xl font-bold">₱999</span>
+                  <span className="text-3xl font-bold">₱249</span>
                   <span className="text-muted-foreground">/month</span>
                 </div>
               </CardHeader>
@@ -326,7 +326,7 @@ export default function SubscriptionManagement({ user, subscription }: Subscript
                   <CardDescription>For established businesses</CardDescription>
                 </div>
                 <div className="mt-2">
-                  <span className="text-3xl font-bold">₱1,999</span>
+                  <span className="text-3xl font-bold">₱499</span>
                   <span className="text-muted-foreground">/month</span>
                 </div>
               </CardHeader>
