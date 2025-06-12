@@ -10,6 +10,7 @@ let globalUser: User | null = null;
 let globalAuthLoading = true;
 let globalAuthError: string | null = null;
 let globalListeners: Array<() => void> = [];
+let authCheckInProgress = false;
 
 // Helper to notify all listeners of auth state changes
 const notifyListeners = () => {
@@ -36,9 +37,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(globalUser);
   const [loading, setLoading] = useState(globalAuthLoading);
   const [error, setError] = useState<string | null>(globalAuthError);
+  const [tabVisible, setTabVisible] = useState(true);
 
   const refreshAuth = async () => {
+    // Prevent multiple simultaneous auth checks
+    if (authCheckInProgress) return;
+    
     try {
+      authCheckInProgress = true;
       setLoading(true);
       setError(null);
       globalAuthLoading = true;
@@ -62,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
       globalAuthLoading = false;
+      authCheckInProgress = false;
     }
   };
 
@@ -88,6 +95,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Handle visibility change events
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const isVisible = document.visibilityState === 'visible';
+      setTabVisible(isVisible);
+      
+      // If we already have a user and tab becomes visible again,
+      // no need to show loading state or re-authenticate
+      if (isVisible && globalUser) {
+        setLoading(false);
+        globalAuthLoading = false;
+      }
+    };
+    
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+    
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     // Try to get session from localStorage first for immediate display
     try {
@@ -98,6 +130,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (parsed?.currentSession?.user) {
             globalUser = parsed.currentSession.user;
             setUser(parsed.currentSession.user);
+            // If we have a user from localStorage, we can set loading to false immediately
+            if (tabVisible) {
+              setLoading(false);
+              globalAuthLoading = false;
+            }
           }
         }
       }
@@ -114,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     globalListeners.push(listener);
 
     // Get initial session from server if we haven't already
-    if (globalAuthLoading) {
+    if (globalAuthLoading && !globalUser) {
       refreshAuth();
     }
 
@@ -148,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Unsubscribe from auth changes
       subscription.unsubscribe();
     };
-  }, []);
+  }, [tabVisible]);
 
   return (
     <AuthContext.Provider value={{ user, loading, error, refreshAuth, logout }}>

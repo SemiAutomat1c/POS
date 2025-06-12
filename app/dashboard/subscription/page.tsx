@@ -9,24 +9,58 @@ import { useAuth } from '@/providers/AuthProvider';
 import { clearAllCookies } from '@/lib/utils';
 import { supabase } from '@/lib/storage/supabase';
 
+// Track if data has been fetched to prevent duplicate loading states
+let dataFetchedGlobally = false;
+
 export default function DashboardSubscriptionPage() {
   const router = useRouter();
   const { user, loading: authLoading, logout, error: authError } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!dataFetchedGlobally);
   const [userData, setUserData] = useState<any>(null);
   const [subscriptionData, setSubscriptionData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tabVisible, setTabVisible] = useState(true);
+
+  // Handle visibility change events
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const isVisible = document.visibilityState === 'visible';
+      setTabVisible(isVisible);
+      
+      // If we already have data and tab becomes visible again,
+      // no need to show loading state or refetch
+      if (isVisible && userData) {
+        setLoading(false);
+      }
+    };
+    
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+    
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
+    };
+  }, [userData]);
 
   // Set cookie to prevent potential redirect loops
   useEffect(() => {
     // Ensure cookie exists with long expiry
-    document.cookie = "redirect_loop_prevention=true; path=/; max-age=300";
+    document.cookie = "subscription_redirect_prevention=true; path=/; max-age=300";
   }, []);
 
   // Fetch user and subscription data when auth is ready
   useEffect(() => {
     async function fetchData() {
       if (authLoading || !user) {
+        setLoading(false);
+        return;
+      }
+      
+      // If we already have data and it's just a tab visibility change, don't refetch
+      if (dataFetchedGlobally && userData) {
         setLoading(false);
         return;
       }
@@ -61,6 +95,7 @@ export default function DashboardSubscriptionPage() {
 
         setUserData(userData);
         setSubscriptionData(subscriptionData || null);
+        dataFetchedGlobally = true;
       } catch (err: any) {
         console.error('Error fetching data:', err);
         setError(err.message);
@@ -70,7 +105,7 @@ export default function DashboardSubscriptionPage() {
     }
 
     fetchData();
-  }, [user, authLoading]);
+  }, [user, authLoading, tabVisible]);
 
   // Show loading state while fetching data
   if (loading) {

@@ -28,13 +28,22 @@ export function Loading({ message = 'Loading...', fullScreen = true }: LoadingPr
 
 export function AuthLoading() {
   const [isMounted, setIsMounted] = useState(false);
+  const [showLoading, setShowLoading] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
+    
+    // Add a small delay before showing the loading indicator
+    // This prevents flickering on quick tab changes
+    const timer = setTimeout(() => {
+      setShowLoading(true);
+    }, 300); // 300ms delay
+    
+    return () => clearTimeout(timer);
   }, []);
 
-  if (!isMounted) {
-    return null; // Return nothing during server-side rendering
+  if (!isMounted || !showLoading) {
+    return null; // Return nothing during server-side rendering or during the delay
   }
 
   return (
