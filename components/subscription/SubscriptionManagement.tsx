@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/storage/supabase';
+import { getTierName, getTierFeatures, SubscriptionTier } from '@/lib/subscription';
 
 interface SubscriptionManagementProps {
   user: any;
@@ -40,55 +41,13 @@ export default function SubscriptionManagement({ user, subscription }: Subscript
   };
   
   // Get tier display name
-  const getTierName = () => {
-    switch(tier) {
-      case 'free': return 'Free Plan';
-      case 'basic': return 'Basic Plan';
-      case 'premium': return 'Premium Plan';
-      case 'enterprise': return 'Enterprise Plan';
-      default: return tier.charAt(0).toUpperCase() + tier.slice(1);
-    }
+  const displayTierName = () => {
+    return getTierName(tier as SubscriptionTier);
   };
   
   // Get tier features
-  const getTierFeatures = () => {
-    switch(tier) {
-      case 'free':
-        return [
-          'Up to 50 products',
-          'Basic analytics',
-          'Single user',
-          'Community support'
-        ];
-      case 'basic':
-        return [
-          'Up to 500 products',
-          'Enhanced analytics',
-          'Up to 3 users',
-          'Email support',
-          'Inventory management'
-        ];
-      case 'premium':
-        return [
-          'Unlimited products',
-          'Advanced analytics',
-          'Up to 10 users',
-          'Priority support',
-          'Advanced inventory management',
-          'Customer loyalty features'
-        ];
-      case 'enterprise':
-        return [
-          'Unlimited everything',
-          'Custom analytics',
-          'Unlimited users',
-          'Dedicated support',
-          'Custom features',
-          'API access'
-        ];
-      default:
-        return ['Basic features'];
-    }
+  const displayTierFeatures = () => {
+    return getTierFeatures(tier as SubscriptionTier);
   };
   
   // Function to handle plan upgrade
@@ -211,9 +170,9 @@ export default function SubscriptionManagement({ user, subscription }: Subscript
         <CardContent>
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-medium">{getTierName()}</h3>
+              <h3 className="text-lg font-medium">{displayTierName()}</h3>
               <ul className="mt-2 space-y-1">
-                {getTierFeatures().map((feature, index) => (
+                {displayTierFeatures().map((feature, index) => (
                   <li key={index} className="flex items-center">
                     <svg 
                       xmlns="http://www.w3.org/2000/svg" 
@@ -238,7 +197,7 @@ export default function SubscriptionManagement({ user, subscription }: Subscript
             {isTrialActive && tier !== 'free' && (
               <div className="bg-amber-50 p-3 rounded-md border border-amber-200">
                 <p className="text-amber-800">
-                  Your trial will end in {daysLeftInTrial} days. After that, you'll need to set up payment to continue using {getTierName()}.
+                  Your trial will end in {daysLeftInTrial} days. After that, you'll need to set up payment to continue using {displayTierName()}.
                 </p>
               </div>
             )}
@@ -246,7 +205,7 @@ export default function SubscriptionManagement({ user, subscription }: Subscript
             {status === 'trial' && !isTrialActive && tier !== 'free' && (
               <div className="bg-red-50 p-3 rounded-md border border-red-200">
                 <p className="text-red-800">
-                  Your trial has expired. Please set up payment to continue using {getTierName()} features.
+                  Your trial has expired. Please set up payment to continue using {displayTierName()} features.
                 </p>
               </div>
             )}
@@ -255,173 +214,162 @@ export default function SubscriptionManagement({ user, subscription }: Subscript
       </Card>
       
       {/* Available Plans */}
-      <div>
-        <h2 className="text-xl font-bold mb-4">Available Plans</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Free Plan */}
-          <Card className={tier === 'free' ? 'border-2 border-primary' : ''}>
-            <CardHeader>
-              <CardTitle>Free</CardTitle>
-              <CardDescription>For small businesses just starting out</CardDescription>
-              <div className="mt-2 text-2xl font-bold">₱0<span className="text-sm font-normal text-muted-foreground">/month</span></div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                <li className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Up to 50 products
-                </li>
-                <li className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Basic analytics
-                </li>
-                <li className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Single user
-                </li>
-                <li className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Community support
-                </li>
-              </ul>
-            </CardContent>
-            <CardFooter>
-              {tier !== 'free' ? (
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Available Plans</CardTitle>
+          <CardDescription>Choose the plan that works for your business</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Free Plan */}
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col space-y-1.5">
+                  <CardTitle>Free</CardTitle>
+                  <CardDescription>For small businesses just starting out</CardDescription>
+                </div>
+                <div className="mt-2">
+                  <span className="text-3xl font-bold">₱0</span>
+                  <span className="text-muted-foreground">/month</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {displayTierFeatures().map((feature, index) => (
+                    <li key={index} className="flex items-center">
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        width="16" 
+                        height="16" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        className="mr-2 text-green-500"
+                      >
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+              <CardFooter>
                 <Button 
-                  className="w-full" 
                   variant="outline" 
-                  onClick={() => handleDowngrade('free')}
-                  disabled={isLoading}
+                  className="w-full"
+                  disabled={tier === 'free'}
                 >
-                  Downgrade to Free
+                  {tier === 'free' ? 'Current Plan' : 'Downgrade to Free'}
                 </Button>
-              ) : (
-                <Button className="w-full" variant="outline" disabled>
-                  Current Plan
-                </Button>
-              )}
-            </CardFooter>
-          </Card>
-          
-          {/* Basic Plan */}
-          <Card className={tier === 'basic' ? 'border-2 border-primary' : ''}>
-            <CardHeader>
-              <CardTitle>Basic</CardTitle>
-              <CardDescription>For growing businesses</CardDescription>
-              <div className="mt-2 text-2xl font-bold">₱999<span className="text-sm font-normal text-muted-foreground">/month</span></div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                <li className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Up to 500 products
-                </li>
-                <li className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Enhanced analytics
-                </li>
-                <li className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Up to 3 users
-                </li>
-                <li className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Email support
-                </li>
-                <li className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Inventory management
-                </li>
-              </ul>
-            </CardContent>
-            <CardFooter>
-              {tier === 'basic' ? (
-                <Button className="w-full" variant="outline" disabled>
-                  Current Plan
-                </Button>
-              ) : tier === 'premium' || tier === 'enterprise' ? (
+              </CardFooter>
+            </Card>
+            
+            {/* Basic Plan */}
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col space-y-1.5">
+                  <CardTitle>Basic</CardTitle>
+                  <CardDescription>For growing businesses</CardDescription>
+                </div>
+                <div className="mt-2">
+                  <span className="text-3xl font-bold">₱999</span>
+                  <span className="text-muted-foreground">/month</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {getTierFeatures('basic').map((feature, index) => (
+                    <li key={index} className="flex items-center">
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        width="16" 
+                        height="16" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        className="mr-2 text-green-500"
+                      >
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+              <CardFooter>
                 <Button 
-                  className="w-full" 
-                  variant="outline" 
-                  onClick={() => handleDowngrade('basic')}
+                  variant={tier === 'basic' ? 'outline' : 'default'} 
+                  className="w-full"
+                  onClick={() => tier === 'basic' 
+                    ? handleDowngrade('free') 
+                    : (tier === 'free' ? handleUpgrade('basic') : handleDowngrade('basic'))}
                   disabled={isLoading}
                 >
-                  Downgrade to Basic
+                  {isLoading ? 'Processing...' : 
+                    tier === 'basic' ? 'Current Plan' : 
+                    tier === 'free' ? 'Upgrade to Basic' : 'Downgrade to Basic'}
                 </Button>
-              ) : (
+              </CardFooter>
+            </Card>
+            
+            {/* Premium Plan */}
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col space-y-1.5">
+                  <CardTitle>Premium</CardTitle>
+                  <CardDescription>For established businesses</CardDescription>
+                </div>
+                <div className="mt-2">
+                  <span className="text-3xl font-bold">₱1,999</span>
+                  <span className="text-muted-foreground">/month</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {getTierFeatures('premium').map((feature, index) => (
+                    <li key={index} className="flex items-center">
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        width="16" 
+                        height="16" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        className="mr-2 text-green-500"
+                      >
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+              <CardFooter>
                 <Button 
-                  className="w-full" 
-                  onClick={() => handleUpgrade('basic')}
+                  variant={tier === 'premium' ? 'outline' : 'default'}
+                  className="w-full"
+                  onClick={() => tier === 'premium' 
+                    ? handleDowngrade('basic') 
+                    : handleUpgrade('premium')}
                   disabled={isLoading}
                 >
-                  Upgrade to Basic
+                  {isLoading ? 'Processing...' : 
+                    tier === 'premium' ? 'Current Plan' : 'Upgrade to Premium'}
                 </Button>
-              )}
-            </CardFooter>
-          </Card>
-          
-          {/* Premium Plan */}
-          <Card className={tier === 'premium' ? 'border-2 border-primary' : ''}>
-            <CardHeader>
-              <CardTitle>Premium</CardTitle>
-              <CardDescription>For established businesses</CardDescription>
-              <div className="mt-2 text-2xl font-bold">₱1,999<span className="text-sm font-normal text-muted-foreground">/month</span></div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                <li className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Unlimited products
-                </li>
-                <li className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Advanced analytics
-                </li>
-                <li className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Up to 10 users
-                </li>
-                <li className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Priority support
-                </li>
-                <li className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Advanced inventory
-                </li>
-                <li className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Customer loyalty features
-                </li>
-              </ul>
-            </CardContent>
-            <CardFooter>
-              {tier === 'premium' ? (
-                <Button className="w-full" variant="outline" disabled>
-                  Current Plan
-                </Button>
-              ) : tier === 'enterprise' ? (
-                <Button 
-                  className="w-full" 
-                  variant="outline" 
-                  onClick={() => handleDowngrade('premium')}
-                  disabled={isLoading}
-                >
-                  Downgrade to Premium
-                </Button>
-              ) : (
-                <Button 
-                  className="w-full" 
-                  onClick={() => handleUpgrade('premium')}
-                  disabled={isLoading}
-                >
-                  Upgrade to Premium
-                </Button>
-              )}
-            </CardFooter>
-          </Card>
-        </div>
-      </div>
+              </CardFooter>
+            </Card>
+          </div>
+        </CardContent>
+      </Card>
       
       {/* Payment Section - Placeholder for future GCash integration */}
       {tier !== 'free' && (
