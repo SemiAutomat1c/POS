@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AuthLoading } from '@/components/ui/loading';
 import { useAuth } from '@/providers/AuthProvider';
 import { clearAllCookies } from '@/lib/utils';
+import RouteGuard from '@/components/subscription/RouteGuard';
 
 // Track if we've already shown the loading screen
 let globalAuthCheckStarted = false;
@@ -64,6 +65,10 @@ export default function DashboardLayout({
     return <AuthLoading />;
   }
 
-  // If ready, render the dashboard content
-  return <div>{children}</div>;
+  // If ready, render the dashboard content with RouteGuard
+  return (
+    <RouteGuard>
+      <div>{children}</div>
+    </RouteGuard>
+  );
 } 

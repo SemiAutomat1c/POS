@@ -82,6 +82,7 @@ export default function Sidebar() {
   const [hasMounted, setHasMounted] = useState(false)
   const { user } = useAuth()
   const [storeName, setStoreName] = useState<string | null>(null)
+  const [isStoreLoaded, setIsStoreLoaded] = useState(false)
 
   useEffect(() => {
     setHasMounted(true)
@@ -103,6 +104,7 @@ export default function Sidebar() {
           
         if (userError || !userData?.store_id) {
           console.error("Error fetching user's store id:", userError)
+          setIsStoreLoaded(true)
           return
         }
         
@@ -115,17 +117,22 @@ export default function Sidebar() {
           
         if (storeError || !storeData) {
           console.error("Error fetching store name:", storeError)
+          setIsStoreLoaded(true)
           return
         }
         
         setStoreName(storeData.name)
+        setIsStoreLoaded(true)
       } catch (error) {
         console.error("Error in fetchStoreName:", error)
+        setIsStoreLoaded(true)
       }
     }
     
-    fetchStoreName()
-  }, [user])
+    if (hasMounted) {
+      fetchStoreName()
+    }
+  }, [user, hasMounted])
 
   const handleLogout = async () => {
     await logout()
@@ -135,10 +142,20 @@ export default function Sidebar() {
   const sidebarContent = (
     <>
       <div className="p-6 border-b">
-        <h2 className="font-semibold text-xl">
-          {storeName ? storeName : "GadgetTrack"}
-        </h2>
-        <p className="text-sm text-muted-foreground">Inventory Management</p>
+        {/* Always render GadgetTrack on initial server render to prevent hydration mismatch */}
+        {!hasMounted ? (
+          <>
+            <h2 className="font-semibold text-xl">GadgetTrack</h2>
+            <p className="text-sm text-muted-foreground">Inventory Management</p>
+          </>
+        ) : (
+          <>
+            <h2 className="font-semibold text-xl">
+              {isStoreLoaded && storeName ? storeName : "GadgetTrack"}
+            </h2>
+            <p className="text-sm text-muted-foreground">Inventory Management</p>
+          </>
+        )}
       </div>
       <nav className="flex-1 overflow-auto py-6 px-3">
         <ul className="space-y-1">
