@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, Mail, ArrowLeft, CheckCircle } from 'lucide-react';
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordForm() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -156,5 +156,29 @@ export default function ForgotPasswordPage() {
         </Card>
       </motion.div>
     </div>
+  );
+}
+
+// Loading fallback component
+function LoadingFallback() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <Card className="shadow-lg w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">Forgot Password</CardTitle>
+        </CardHeader>
+        <CardContent className="flex justify-center py-8">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ForgotPasswordForm />
+    </Suspense>
   );
 } 
