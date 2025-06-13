@@ -4,9 +4,9 @@ import { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/storage/supabase';
-import { ArrowRight, User, Mail, Lock, CheckCircle } from 'lucide-react';
+import { ArrowRight, User, Mail, Lock, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
@@ -34,6 +34,7 @@ function LoginContent() {
   });
   const justRegistered = searchParams.get('registered') === 'true';
   const redirectPath = searchParams.get('redirect') || '/dashboard';
+  const resetSuccess = searchParams.get('reset') === 'success';
 
   // Check if already logged in
   useEffect(() => {
@@ -151,6 +152,14 @@ function LoginContent() {
     }));
   };
 
+  useEffect(() => {
+    // Check if user just registered
+    const justRegistered = searchParams.get('registered') === 'true';
+    if (justRegistered) {
+      setLoginSuccess(true);
+    }
+  }, [searchParams]);
+
   // Show loading state while checking initial session
   if (initialLoading) {
     return <AuthLoading />;
@@ -173,8 +182,19 @@ function LoginContent() {
                 <span className="text-sm">Registration successful! Please login.</span>
               </div>
             )}
+            {resetSuccess && (
+              <div className="bg-green-50 text-green-600 p-3 rounded-md text-sm mb-4">
+                Your password has been reset successfully. Please log in with your new password.
+              </div>
+            )}
           </CardHeader>
           <CardContent>
+            {error && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm mb-4 flex items-start">
+                <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
@@ -215,11 +235,6 @@ function LoginContent() {
                   />
                 </div>
               </div>
-              {error && (
-                <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
-                  {error}
-                </div>
-              )}
               <Button 
                 type="submit" 
                 className="w-full flex items-center justify-center gap-2"
