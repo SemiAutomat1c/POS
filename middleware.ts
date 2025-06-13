@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { AUTH_CONFIG } from './app/config';
 
 // Keep track of redirect attempts to prevent loops
 const MAX_REDIRECTS = 3;
@@ -47,22 +48,13 @@ export async function middleware(req: NextRequest) {
   console.log(`[${requestId}] Path: ${req.nextUrl.pathname}, Authenticated: ${isAuthenticated}`);
   
   // Routes that should redirect to dashboard if user is logged in
-  const authRedirectRoutes = [
-    '/',  // Landing page
-    '/register',
-    '/login',
-    '/custom-signup',
-  ];
+  const authRedirectRoutes = AUTH_CONFIG.AUTH_REDIRECT_ROUTES;
   
   // Routes that authenticated users should be able to access directly (not redirect to dashboard)
-  const authenticatedAccessRoutes = [
-    '/dashboard/subscription',
-  ];
+  const authenticatedAccessRoutes = AUTH_CONFIG.AUTHENTICATED_ACCESS_ROUTES;
   
   // Routes that require authentication but shouldn't redirect to dashboard
-  const protectedRoutes = [
-    '/dashboard/subscription',
-  ];
+  const protectedRoutes = AUTH_CONFIG.PROTECTED_ROUTES;
   
   // Check if current path is exact match for a route that should redirect
   const isAuthRedirectRoute = authRedirectRoutes.includes(req.nextUrl.pathname);
@@ -79,18 +71,7 @@ export async function middleware(req: NextRequest) {
   }
   
   // Public routes that don't require authentication
-  const publicRoutes = [
-    '/login',
-    '/register',
-    '/direct-register',
-    '/api-test',
-    '/dashboard/demo',
-    '/demo',  // New demo page at root level
-    '/',  // Landing page
-    '/custom-signup',  // Custom signup page
-    '/auth-test',  // Authentication test page
-    '/dashboard-redirect', // Dashboard redirect page
-  ];
+  const publicRoutes = AUTH_CONFIG.PUBLIC_ROUTES;
   
   // Check if the current path is a public route or an API route
   const isPublicRoute = publicRoutes.some(route => 

@@ -8,16 +8,23 @@ export async function POST(request: Request) {
   try {
     const { password, token } = await request.json();
 
-    if (!password || !token) {
+    if (!password) {
       return NextResponse.json(
-        { error: 'Password and reset token are required' },
+        { error: 'Password is required' },
         { status: 400 }
       );
     }
 
-    if (password.length < 8) {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Password must be at least 8 characters long' },
+        { error: 'Reset token is required' },
+        { status: 400 }
+      );
+    }
+
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: 'Password must be at least 6 characters long' },
         { status: 400 }
       );
     }
@@ -31,19 +38,20 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      console.error('Password update error:', error);
+      console.error('Error resetting password:', error);
       return NextResponse.json(
-        { error: error.message || 'Failed to update password' },
+        { error: 'Failed to reset password. The reset link may have expired.' },
         { status: 500 }
       );
     }
 
+    // Return success response
     return NextResponse.json(
-      { message: 'Password updated successfully' },
+      { message: 'Password reset successfully' },
       { status: 200 }
     );
   } catch (error) {
-    console.error('Unexpected error during password update:', error);
+    console.error('Unexpected error in reset-password route:', error);
     return NextResponse.json(
       { error: 'An unexpected error occurred' },
       { status: 500 }

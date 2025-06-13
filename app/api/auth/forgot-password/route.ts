@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
+    const requestUrl = new URL(request.url);
     const { email } = await request.json();
 
     if (!email) {
@@ -18,26 +19,32 @@ export async function POST(request: Request) {
     // Create a Supabase client
     const supabase = createRouteHandlerClient({ cookies });
 
-    // Send password reset email
+    // Get the site URL from environment variables or use the request URL
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || requestUrl.origin;
+    
+    // Generate the reset URL
+    const resetUrl = `${siteUrl}/reset-password`;
+
+    // Send the password reset email
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`,
+      redirectTo: `${resetUrl}`,
     });
 
     if (error) {
-      console.error('Password reset error:', error);
+      console.error('Error sending reset password email:', error);
       return NextResponse.json(
-        { error: 'Failed to send password reset email' },
+        { error: 'Failed to send reset password email' },
         { status: 500 }
       );
     }
 
-    // Always return success even if email doesn't exist (for security)
+    // Return success response
     return NextResponse.json(
-      { message: 'Password reset email sent' },
+      { message: 'Password reset email sent successfully' },
       { status: 200 }
     );
   } catch (error) {
-    console.error('Unexpected error during password reset:', error);
+    console.error('Unexpected error in forgot-password route:', error);
     return NextResponse.json(
       { error: 'An unexpected error occurred' },
       { status: 500 }
