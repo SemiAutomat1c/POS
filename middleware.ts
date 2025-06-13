@@ -83,10 +83,6 @@ export async function middleware(req: NextRequest) {
     '/login',
     '/register',
     '/direct-register',
-    '/test-register',
-    '/test-auth-register',
-    '/auth-register',
-    '/simple-register',
     '/api-test',
     '/dashboard/demo',
     '/demo',  // New demo page at root level
