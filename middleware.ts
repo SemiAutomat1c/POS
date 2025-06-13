@@ -186,5 +186,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)','/', '/register', '/login', '/subscription', '/dashboard/subscription', '/dashboard/demo', '/demo'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)','/', '/register', '/login', '/forgot-password', '/reset-password', '/subscription', '/dashboard/subscription', '/dashboard/demo', '/demo'],
 }; 

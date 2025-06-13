@@ -22,7 +22,9 @@ export default function RootLayoutClient({
   const pathname = usePathname()
   const isMarketingPage = pathname === '/' || 
                           pathname.startsWith('/login') || 
-                          pathname.startsWith('/register')
+                          pathname.startsWith('/register') ||
+                          pathname.startsWith('/forgot-password') ||
+                          pathname.startsWith('/reset-password')
 
   const isDemoPage = pathname.startsWith('/dashboard/demo') || pathname.startsWith('/demo')
 
