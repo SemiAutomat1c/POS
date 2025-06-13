@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -17,7 +16,10 @@ export async function POST(request: Request) {
     }
 
     // Create a Supabase client
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
 
     // Get the site URL from environment variables or use the request URL
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || requestUrl.origin;
