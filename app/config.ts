@@ -24,6 +24,11 @@ export const AUTH_CONFIG = {
     '/dashboard-redirect',
     '/forgot-password',
     '/reset-password',
+    '/manifest.json',
+    '/sw.js',
+    '/workbox-4754cb34.js',
+    '/icons',
+    '/.well-known',
   ],
   
   // Routes that should redirect to dashboard if user is logged in

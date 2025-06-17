@@ -22,7 +22,8 @@ import {
   BarChart3,
   Zap,
   Shield,
-  Cloud
+  Cloud,
+  LogIn
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -220,6 +221,18 @@ export default function LandingPage() {
     }
   }
 
+  // Login button component
+  const LoginButton = () => (
+    <div className="fixed top-4 right-4 z-50">
+      <Link href="/login">
+        <Button variant="outline" className="flex items-center gap-2 bg-white/80 backdrop-blur-sm hover:bg-white">
+          <LogIn className="h-4 w-4" />
+          <span>Log In</span>
+        </Button>
+      </Link>
+    </div>
+  )
+
   const features = [
     {
       title: 'Inventory Management',
@@ -248,7 +261,7 @@ export default function LandingPage() {
     },
     {
       title: 'Returns Processing',
-      description: 'Handle product returns and exchanges seamlessly with our integrated returns management system. Track return reasons for quality improvement.',
+      description: 'Streamlined returns workflow with reason tracking, refund processing, and inventory updates. Keep customers happy with hassle-free returns.',
       icon: <RefreshCw className="h-6 w-6" />,
     },
   ]
@@ -263,6 +276,9 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
+      {/* Login Button */}
+      <LoginButton />
+
       {/* Hero Section */}
       <section className="relative flex-1 flex items-center justify-center py-20 bg-gradient-to-b from-background to-background/95">
         <div className="container text-center max-w-3xl">

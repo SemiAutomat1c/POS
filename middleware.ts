@@ -11,12 +11,20 @@ export async function middleware(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || Math.random().toString(36).substring(2, 15);
   console.log(`[${requestId}] Middleware processing: ${req.nextUrl.pathname}`);
   
-  // Check for static assets and images - return early
+  // Check for static assets, images, and PWA files - return early
   const isStaticAsset = req.nextUrl.pathname.startsWith('/_next/') || 
                         req.nextUrl.pathname.includes('/favicon.ico') ||
                         req.nextUrl.pathname.startsWith('/public/');
   
-  if (isStaticAsset) {
+  const isPWAFile = req.nextUrl.pathname === '/manifest.json' ||
+                    req.nextUrl.pathname === '/sw.js' ||
+                    req.nextUrl.pathname.includes('/workbox-') ||
+                    req.nextUrl.pathname.startsWith('/icons/') ||
+                    req.nextUrl.pathname.startsWith('/.well-known/');
+  
+  // IMPORTANT: Allow PWA files to bypass authentication
+  if (isStaticAsset || isPWAFile) {
+    console.log(`[${requestId}] Bypassing auth for static/PWA asset: ${req.nextUrl.pathname}`);
     return NextResponse.next();
   }
   

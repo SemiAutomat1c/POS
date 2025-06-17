@@ -25,6 +25,7 @@ export function PWAInstallPrompt() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isVisible, setIsVisible] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
+  const [promptCaptured, setPromptCaptured] = useState(false)
 
   useEffect(() => {
     // Only run on client side
@@ -40,9 +41,6 @@ export function PWAInstallPrompt() {
       return;
     }
 
-    // Get previously stored user choice
-    const hasPrompted = localStorage.getItem('pwa-install-prompted');
-    
     // Listen for beforeinstallprompt event
     const handler = (e: BeforeInstallPromptEvent) => {
       // Prevent default browser prompt
@@ -50,33 +48,40 @@ export function PWAInstallPrompt() {
       
       // Save event for later use
       setInstallPrompt(e)
+      setPromptCaptured(true)
       
-      // Only show our prompt if user hasn't seen it in the past 30 days
-      if (!hasPrompted || Date.now() - parseInt(hasPrompted) > 30 * 24 * 60 * 60 * 1000) {
-        // Show prompt after 30 seconds
-        setTimeout(() => {
-          setIsVisible(true)
-          // Save timestamp of when we showed the prompt
-          localStorage.setItem('pwa-install-prompted', Date.now().toString())
-        }, 30000)
-      }
+      // Show our prompt immediately if the app is installable
+      setIsVisible(true)
+      console.log("PWA is installable! Install prompt captured.");
     }
 
+    // Add a debug message to check if the event listener is set up
+    console.log("Setting up beforeinstallprompt event listener");
     window.addEventListener('beforeinstallprompt', handler)
+
+    // Only show the warning if we haven't captured a prompt
+    const warningTimeout = setTimeout(() => {
+      if (!promptCaptured && !isInstalled) {
+        console.log("No install prompt detected after 3 seconds. This is normal if you've already installed the app or declined installation previously.");
+      }
+    }, 3000);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler)
+      clearTimeout(warningTimeout)
     }
-  }, [])
+  }, [promptCaptured, isInstalled])
 
   const handleInstall = async () => {
     if (!installPrompt) return
     
+    console.log("Triggering install prompt");
     // Show browser install prompt
     await installPrompt.prompt()
     
     // Wait for user choice
     const { outcome } = await installPrompt.userChoice
+    console.log(`User ${outcome} the installation`);
     
     // Clear saved prompt
     setInstallPrompt(null)
@@ -89,13 +94,18 @@ export function PWAInstallPrompt() {
 
   const handleClose = () => {
     setIsVisible(false)
+    // Store that user dismissed the prompt
+    localStorage.setItem('pwa-install-dismissed', Date.now().toString())
   }
 
-  if (!isVisible || isInstalled) return null
+  // Only show if we have a prompt and it's visible
+  if ((!isVisible || !installPrompt) && !isInstalled) {
+    return null
+  }
 
   return (
     <div className="fixed bottom-4 left-4 z-50 max-w-xs">
-      <Card className="p-4 shadow-lg">
+      <Card className="p-4 shadow-lg border-2 border-blue-500">
         <div className="flex justify-between items-start">
           <h3 className="font-medium">Install GadgetTrack</h3>
           <Button variant="ghost" size="icon" onClick={handleClose} className="h-6 w-6 -mt-1 -mr-1">
