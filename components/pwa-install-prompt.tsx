@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { X, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -26,10 +27,17 @@ export function PWAInstallPrompt() {
   const [isVisible, setIsVisible] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
   const [promptCaptured, setPromptCaptured] = useState(false)
+  const pathname = usePathname()
+  
+  // Only show on landing page or demo pages
+  const isAllowedPage = pathname === '/' || 
+                        pathname.startsWith('/demo') || 
+                        pathname.startsWith('/login') || 
+                        pathname.startsWith('/register')
 
   useEffect(() => {
-    // Only run on client side
-    if (typeof window === 'undefined') return
+    // Only run on client side and on allowed pages
+    if (typeof window === 'undefined' || !isAllowedPage) return
     
     // Check if app is already installed (imperfect method)
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
@@ -70,7 +78,7 @@ export function PWAInstallPrompt() {
       window.removeEventListener('beforeinstallprompt', handler)
       clearTimeout(warningTimeout)
     }
-  }, [promptCaptured, isInstalled])
+  }, [promptCaptured, isInstalled, isAllowedPage])
 
   const handleInstall = async () => {
     if (!installPrompt) return
@@ -98,8 +106,8 @@ export function PWAInstallPrompt() {
     localStorage.setItem('pwa-install-dismissed', Date.now().toString())
   }
 
-  // Only show if we have a prompt and it's visible
-  if ((!isVisible || !installPrompt) && !isInstalled) {
+  // Only show if we have a prompt and it's visible and we're on an allowed page
+  if ((!isVisible || !installPrompt || !isAllowedPage) && !isInstalled) {
     return null
   }
 

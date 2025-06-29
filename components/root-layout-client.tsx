@@ -60,7 +60,6 @@ export default function RootLayoutClient({
       </div>
       <ClientToaster />
       <OfflineIndicator />
-      <PWAInstallPrompt />
     </DatabaseProvider>
   )
 } 
